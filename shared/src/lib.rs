@@ -31,6 +31,9 @@ where
             group.push(text);
         }
     }
+    if !group.is_empty() {
+        groups.push(group);
+    }
     groups
 }
 
