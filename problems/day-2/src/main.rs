@@ -91,12 +91,8 @@ impl TryFrom<&(Play, Play)> for Outcome {
     fn try_from(value: &(Play, Play)) -> Result<Self, Self::Error> {
         match value {
             (x, y) if x == y => Ok(Outcome::Draw),
-            (Play::Rock, Play::Paper) => Ok(Outcome::Win),
-            (Play::Rock, Play::Scissors) => Ok(Outcome::Loss),
-            (Play::Paper, Play::Rock) => Ok(Outcome::Loss),
-            (Play::Paper, Play::Scissors) => Ok(Outcome::Win),
-            (Play::Scissors, Play::Rock) => Ok(Outcome::Win),
-            (Play::Scissors, Play::Paper) => Ok(Outcome::Loss),
+            (x, y) if x.beats() == *y => Ok(Outcome::Loss),
+            (x, y) if x.loses_to() == *y => Ok(Outcome::Win),
             _ => Err("Unrecognized play combination".to_owned()),
         }
     }
