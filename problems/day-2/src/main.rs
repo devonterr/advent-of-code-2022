@@ -1,4 +1,4 @@
-use shared::read_lines;
+use shared::{read_lines, AoCProblem, AoCSolution, Solution};
 
 static INPUT_FILE_NAME: &str = "data/day-2/input.txt";
 static TEST_INPUT_FILE_NAME: &str = "data/day-2/test.txt";
@@ -150,29 +150,41 @@ impl TryFrom<String> for Round2 {
     }
 }
 
-fn main() {
-    let file = INPUT_FILE_NAME;
-    let scores: Vec<i32> = read_lines(file)
-        .expect("Should be able to read input file")
-        .map(|line| {
-            Round::try_from(line.expect("Should be able to read line"))
-                .expect("Should be able to parse Round")
-        })
-        .map(|round| round.score())
-        .collect();
-    // println!("{:#?}", scores);
-    println!("Score {}", scores.iter().sum::<i32>());
+struct Day2 {}
+impl AoCProblem for Day2 {
+    fn name(&self) -> String {
+        "day-2".to_owned()
+    }
+}
+impl Solution for Day2 {
+    fn solution(&self, path: &str) {
+        let file = path;
+        let scores: Vec<i32> = read_lines(file)
+            .expect("Should be able to read input file")
+            .map(|line| {
+                Round::try_from(line.expect("Should be able to read line"))
+                    .expect("Should be able to parse Round")
+            })
+            .map(|round| round.score())
+            .collect();
+        // println!("{:#?}", scores);
+        println!("Score {}", scores.iter().sum::<i32>());
 
-    let scores2: Vec<i32> = read_lines(file)
-        .expect("Should be able to read input file")
-        .map(|line| {
-            Round2::try_from(line.expect("Should be able to read line"))
-                .expect("Should be able to parse Round")
-        })
-        .map(|round| match round {
-            Round2(r) => r.score(),
-        })
-        .collect();
-    // println!("{:#?}", scores2);
-    println!("Score2 {}", scores2.iter().sum::<i32>());
+        let scores2: Vec<i32> = read_lines(file)
+            .expect("Should be able to read input file")
+            .map(|line| {
+                Round2::try_from(line.expect("Should be able to read line"))
+                    .expect("Should be able to parse Round")
+            })
+            .map(|round| match round {
+                Round2(r) => r.score(),
+            })
+            .collect();
+        // println!("{:#?}", scores2);
+        println!("Score2 {}", scores2.iter().sum::<i32>());
+    }
+}
+
+fn main() {
+    Day2 {}.test_and_run();
 }

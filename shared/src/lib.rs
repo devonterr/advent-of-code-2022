@@ -34,6 +34,53 @@ where
     groups
 }
 
+pub trait Problem {
+    fn test_file(&self) -> String;
+    fn input_file(&self) -> String;
+}
+pub trait Solution {
+    fn solution(&self, path: &str);
+}
+pub trait AoCSolution {
+    fn test(&self);
+    fn run(&self);
+    fn test_and_run(&self) {
+        println!("Testing:");
+        self.test();
+        println!("\nRunning:");
+        self.run();
+    }
+}
+pub trait AoCProblem {
+    fn name(&self) -> String;
+}
+
+impl<T> Problem for T
+where
+    T: AoCProblem,
+{
+    fn test_file(&self) -> String {
+        format!("data/{}/test.txt", &self.name())
+    }
+
+    fn input_file(&self) -> String {
+        format!("data/{}/input.txt", &self.name())
+    }
+}
+
+impl<T> AoCSolution for T
+where
+    T: Problem + Solution,
+{
+    fn test(&self) {
+        self.solution(&self.test_file())
+    }
+
+    fn run(&self) {
+        self.solution(&self.input_file())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
