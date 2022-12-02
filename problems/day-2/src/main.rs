@@ -3,94 +3,180 @@ use shared::read_lines;
 static INPUT_FILE_NAME: &str = "data/day-2/input.txt";
 static TEST_INPUT_FILE_NAME: &str = "data/day-2/test.txt";
 
-fn normalize(play: char) -> String {
-    match play {
-        'A' | 'X' => "Rock".to_owned(),
-        'B' | 'Y' => "Paper".to_owned(),
-        'C' | 'Z' => "Scissors".to_owned(),
-        _ => panic!("Bad data"),
+#[derive(Clone)]
+enum Outcome {
+    Win,
+    Draw,
+    Loss,
+}
+impl Outcome {
+    fn score(&self) -> i32 {
+        match &self {
+            Outcome::Win => 6,
+            Outcome::Draw => 3,
+            Outcome::Loss => 0,
+        }
     }
 }
 
-fn score_outcome(play: &str, opponent: &str) -> i32 {
-    match (play, opponent) {
-        ("Rock", "Paper") => 0,
-        ("Paper", "Scissors") => 0,
-        ("Scissors", "Rock") => 0,
-        ("Rock", "Scissors") => 6,
-        ("Paper", "Rock") => 6,
-        ("Scissors", "Paper") => 6,
-        (x, y) if x == y => 3,
-        _ => panic!("Should never happen!"),
+#[derive(PartialEq, Clone)]
+enum Play {
+    Rock,
+    Paper,
+    Scissors,
+}
+impl Play {
+    fn score(&self) -> i32 {
+        match &self {
+            Play::Rock => 1,
+            Play::Paper => 2,
+            Play::Scissors => 3,
+        }
+    }
+    fn beats(&self) -> Play {
+        match &self {
+            Play::Rock => Play::Scissors,
+            Play::Paper => Play::Rock,
+            Play::Scissors => Play::Paper,
+        }
+    }
+    fn loses_to(&self) -> Play {
+        match &self {
+            Play::Rock => Play::Paper,
+            Play::Paper => Play::Scissors,
+            Play::Scissors => Play::Rock,
+        }
     }
 }
 
-fn score_play(play: &str) -> i32 {
-    match play {
-        "Rock" => 1,
-        "Paper" => 2,
-        "Scissors" => 3,
-        _ => panic!("Shouldn't happen"),
+struct Round {
+    player_play: Play,
+    outcome: Outcome,
+}
+impl Round {
+    fn score(&self) -> i32 {
+        &self.player_play.score() + &self.outcome.score()
     }
 }
 
-fn score(opponent: char, play: char) -> i32 {
-    let normal_play = normalize(play);
-    let normal_opponent = normalize(opponent);
-    let scored_outcome = score_outcome(&normal_play, &normal_opponent);
-    let scored_play = score_play(&normal_play);
-    return scored_outcome + scored_play;
+impl TryFrom<char> for Play {
+    type Error = String;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            'A' | 'X' => Ok(Play::Rock),
+            'B' | 'Y' => Ok(Play::Paper),
+            'C' | 'Z' => Ok(Play::Scissors),
+            _ => Err("Unrecognized play".to_owned()),
+        }
+    }
 }
 
-fn outcome_to_play(opponent: char, outcome: char) -> char {
-    match (opponent, outcome) {
-        (p, 'Y') => p,
-        ('A', 'X') => 'C',
-        ('B', 'X') => 'A',
-        ('C', 'X') => 'B',
-        ('A', 'Z') => 'B',
-        ('B', 'Z') => 'C',
-        ('C', 'Z') => 'A',
-        _ => panic!("Shouldn't happen"),
+impl TryFrom<(Outcome, Play)> for Play {
+    type Error = String;
+
+    fn try_from(value: (Outcome, Play)) -> Result<Self, Self::Error> {
+        match value {
+            (Outcome::Win, k) => Ok(k.loses_to()),
+            (Outcome::Loss, k) => Ok(k.beats()),
+            (Outcome::Draw, k) => Ok(k),
+        }
+    }
+}
+
+// (Opponent, Player)
+impl TryFrom<&(Play, Play)> for Outcome {
+    type Error = String;
+
+    fn try_from(value: &(Play, Play)) -> Result<Self, Self::Error> {
+        match value {
+            (x, y) if x == y => Ok(Outcome::Draw),
+            (Play::Rock, Play::Paper) => Ok(Outcome::Win),
+            (Play::Rock, Play::Scissors) => Ok(Outcome::Loss),
+            (Play::Paper, Play::Rock) => Ok(Outcome::Loss),
+            (Play::Paper, Play::Scissors) => Ok(Outcome::Win),
+            (Play::Scissors, Play::Rock) => Ok(Outcome::Win),
+            (Play::Scissors, Play::Paper) => Ok(Outcome::Loss),
+            _ => Err("Unrecognized play combination".to_owned()),
+        }
+    }
+}
+
+impl TryFrom<char> for Outcome {
+    type Error = String;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            'X' => Ok(Outcome::Loss),
+            'Y' => Ok(Outcome::Draw),
+            'Z' => Ok(Outcome::Win),
+            _ => Err("Unrecognized outcome".to_owned()),
+        }
+    }
+}
+
+impl TryFrom<String> for Round {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let parts: Vec<char> = value
+            .trim()
+            .split(" ")
+            .map(|p| p.chars().next().expect("Unexpected format"))
+            .collect();
+        let opponent_play: Play = Play::try_from(parts[0])?;
+        let player_play: Play = Play::try_from(parts[1])?;
+        let outcome: Outcome = Outcome::try_from(&(opponent_play, player_play.clone()))?;
+        Ok(Round {
+            player_play,
+            outcome,
+        })
+    }
+}
+
+struct Round2(Round);
+impl TryFrom<String> for Round2 {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let parts: Vec<char> = value
+            .trim()
+            .split(" ")
+            .map(|p| p.chars().next().expect("Unexpected format"))
+            .collect();
+        let opponent_play: Play = Play::try_from(parts[0])?;
+        let outcome: Outcome = Outcome::try_from(parts[1])?;
+        let player_play: Play = Play::try_from((outcome.clone(), opponent_play))?;
+        Ok(Round2(Round {
+            player_play,
+            outcome,
+        }))
     }
 }
 
 fn main() {
-    let lines: Vec<(String, String)> = read_lines(INPUT_FILE_NAME)
+    let file = INPUT_FILE_NAME;
+    let scores: Vec<i32> = read_lines(file)
         .expect("Should be able to read input file")
         .map(|line| {
-            line.expect("Should read")
-                .split(" ")
-                .map(|p| p.to_owned())
-                .collect::<Vec<String>>()
+            Round::try_from(line.expect("Should be able to read line"))
+                .expect("Should be able to parse Round")
         })
-        .map(|ps| (ps[0].clone(), ps[1].clone()))
+        .map(|round| round.score())
         .collect();
-    let scores: Vec<i32> = lines
-        .iter()
-        .map(|line| {
-            score(
-                line.0.chars().next().unwrap(),
-                line.1.chars().next().unwrap(),
-            )
-        })
-        .collect();
-    let total_score: i32 = scores.iter().sum();
-    println!("Total by Strategy: {}", total_score);
+    // println!("{:#?}", scores);
+    println!("Score {}", scores.iter().sum::<i32>());
 
-    let scores2: Vec<i32> = lines
-        .iter()
-        .map(|pair| {
-            (
-                pair.0.chars().next().unwrap(),
-                outcome_to_play(
-                    pair.0.chars().next().unwrap(),
-                    pair.1.chars().next().unwrap(),
-                ),
-            )
+    let scores2: Vec<i32> = read_lines(file)
+        .expect("Should be able to read input file")
+        .map(|line| {
+            Round2::try_from(line.expect("Should be able to read line"))
+                .expect("Should be able to parse Round")
         })
-        .map(|line| score(line.0, line.1))
+        .map(|round| match round {
+            Round2(r) => r.score(),
+        })
         .collect();
-    let total_score2: i32 = scores2.iter().sum();
-    println!("Total by Strategy 2: {}", total_score2);
+    // println!("{:#?}", scores2);
+    println!("Score2 {}", scores2.iter().sum::<i32>());
 }
