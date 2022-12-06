@@ -44,7 +44,7 @@ impl TryFrom<&String> for StackLayer {
                 }
             })
             .collect();
-        if parts.len() == 0 {
+        if parts.is_empty() {
             return Err("Failed to parse stack layer".to_owned());
         }
         Ok(StackLayer(parts))
@@ -128,7 +128,7 @@ impl TryFrom<(Vec<StackLayer>, Vec<Operation>)> for State {
         // Reverse, so the tops are at the ends
         let reversed = stacks
             .iter()
-            .map(|s| s.iter().rev().map(|c| c.clone()).collect::<String>())
+            .map(|s| s.iter().rev().copied().collect::<String>())
             .collect::<Vec<String>>();
         Ok(State {
             stacks: reversed,
@@ -152,7 +152,7 @@ impl Solution for Day5 {
         let mut stack_layers = vec![];
         // Iterate through Lines once and adjust which parser is applied as we go through sections
         // Try to parse a stack layer
-        while let Some(next_line) = lines.next() {
+        for next_line in lines.by_ref() {
             let layer = StackLayer::try_from(&next_line);
             if layer.is_err() {
                 break;
@@ -162,7 +162,7 @@ impl Solution for Day5 {
         }
         // Once that failes, indicating that we've hit a blank line, swap to parsing moves
         let mut operations = vec![];
-        while let Some(next_line) = lines.next() {
+        for next_line in lines {
             let next_op = Operation::try_from(&next_line);
             operations.push(next_op.expect("Should be able to parse moves"));
         }

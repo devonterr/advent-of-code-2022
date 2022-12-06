@@ -117,7 +117,7 @@ impl TryFrom<String> for Round {
     fn try_from(value: String) -> Result<Self, Self::Error> {
         let parts: Vec<char> = value
             .trim()
-            .split(" ")
+            .split(' ')
             .map(|p| p.chars().next().expect("Unexpected format"))
             .collect();
         let opponent_play: Play = Play::try_from(parts[0])?;
@@ -137,7 +137,7 @@ impl TryFrom<String> for Round2 {
     fn try_from(value: String) -> Result<Self, Self::Error> {
         let parts: Vec<char> = value
             .trim()
-            .split(" ")
+            .split(' ')
             .map(|p| p.chars().next().expect("Unexpected format"))
             .collect();
         let opponent_play: Play = Play::try_from(parts[0])?;

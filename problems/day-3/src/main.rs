@@ -20,8 +20,7 @@ where
 {
     vals.map(|s| s.chars().collect::<HashSet<char>>())
         .reduce(|p, n| {
-            p.intersection(&n)
-                .map(|c| c.clone())
+            p.intersection(&n).copied()
                 .collect::<HashSet<char>>()
         })
         .expect("Should reduce")
@@ -49,7 +48,7 @@ where
     vals.map(|s| s.to_owned())
         .collect::<Vec<String>>()
         .chunks(3)
-        .map(|chunk| Vec::from(chunk))
+        .map(Vec::from)
         .collect::<Vec<Vec<String>>>()
 }
 

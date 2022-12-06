@@ -10,7 +10,7 @@ impl AoCProblem for Day1 {
 impl Solution for Day1 {
     fn solution(&self, path: &str) {
         let lines =
-            shared::read_lines(path).expect(&format!("Expect file to be present: {}", path));
+            shared::read_lines(path).unwrap_or_else(|_| panic!("Expect file to be present: {}", path));
         let groups = shared::segment_lines(lines, |s| s.is_empty());
         let processed: Vec<i32> = groups
             .iter()

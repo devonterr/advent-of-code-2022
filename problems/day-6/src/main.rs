@@ -34,7 +34,7 @@ impl Solution for Day6 {
         let marker = find_run_of_distinct(line.clone(), 4);
         println!("Part one: {:#?}", marker);
 
-        let message_marker = find_run_of_distinct(line.clone(), 14);
+        let message_marker = find_run_of_distinct(line, 14);
         println!("Part two: {:#?}", message_marker);
     }
 }

@@ -13,7 +13,7 @@ impl Interval {
     fn overlaps(&self, interval: &Interval) -> bool {
         (interval.left >= self.left && interval.left <= self.right)
             || (interval.right >= self.left && interval.right <= self.right)
-            || interval.contains(&self)
+            || interval.contains(self)
     }
 
     fn new(a: u32, b: u32) -> Interval {
