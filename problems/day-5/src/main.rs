@@ -1,7 +1,6 @@
-use std::collections::HashMap;
-
 use shared::{read_lines, AoCProblem, AoCSolution, Solution};
 
+#[derive(Debug)]
 struct Operation {
     count: u32,
     from: u32,
@@ -30,7 +29,7 @@ impl TryFrom<&String> for Operation {
 
 struct StackLayer(Vec<Option<char>>);
 impl TryFrom<&String> for StackLayer {
-    type Error = ();
+    type Error = String;
 
     fn try_from(value: &String) -> Result<Self, Self::Error> {
         let parts: Vec<Option<char>> = value
@@ -45,8 +44,16 @@ impl TryFrom<&String> for StackLayer {
                 }
             })
             .collect();
+        if parts.len() == 0 {
+            return Err("Failed to parse stack layer".to_owned());
+        }
         Ok(StackLayer(parts))
     }
+}
+
+enum CraneModel {
+    Model9000,
+    Model9001,
 }
 
 struct State {
@@ -54,33 +61,46 @@ struct State {
     operations: Vec<Operation>,
 }
 impl State {
-    fn apply_moves(&self) -> State {
-        let mut stacks = self.stacks;
-        let operations = self.operations;
-
-        for op in operations {
-            let mut next_stacks = vec![];
-
-            let from_key = op.from as usize;
-            let to_key = op.to as usize;
-
-            for (i, stack) in stacks.iter().enumerate() {
-                if i == from_key {
-                } else if i == to_key {
-                } else {
-                    next_stacks.push(stack);
-                }
-            }
+    fn apply_moves(&self, model: CraneModel) -> State {
+        let mut stacks = self.stacks.clone();
+        for op in &self.operations {
+            let count = op.count as usize;
+            let from_idx = op.from as usize - 1;
+            let to_idx = op.to as usize - 1;
+            let from_stack = stacks[from_idx].clone();
+            let to_move = match &model {
+                CraneModel::Model9000 => from_stack.chars().rev().take(count).collect::<String>(),
+                CraneModel::Model9001 => from_stack
+                    .chars()
+                    .rev()
+                    .take(count)
+                    // Okay, this is actually annoying.
+                    // You can't chain .rev().take(...).rev(), you have to explicitly materialize in between.
+                    .collect::<String>()
+                    .chars()
+                    .rev()
+                    .collect::<String>(),
+            };
+            stacks[to_idx].push_str(to_move.as_str());
+            stacks[from_idx].truncate(from_stack.len() - count);
         }
-
-        todo!()
+        State {
+            stacks,
+            operations: vec![],
+        }
     }
 
     // Top of the stacks
     fn tots(&self) -> String {
         self.stacks
             .iter()
-            .map(|stack| stack.last().map(|c| c.to_string()).unwrap_or("".to_owned()))
+            .map(|stack| {
+                stack
+                    .chars()
+                    .last()
+                    .map(|c| c.to_string())
+                    .unwrap_or("".to_owned())
+            })
             .collect::<String>()
     }
 }
@@ -108,8 +128,8 @@ impl TryFrom<(Vec<StackLayer>, Vec<Operation>)> for State {
         // Reverse, so the tops are at the ends
         let reversed = stacks
             .iter()
-            .map(|s| s.iter().rev().map(|c| c.clone()).collect::<Vec<char>>())
-            .collect::<Vec<Vec<char>>>();
+            .map(|s| s.iter().rev().map(|c| c.clone()).collect::<String>())
+            .collect::<Vec<String>>();
         Ok(State {
             stacks: reversed,
             operations: value.1,
@@ -147,11 +167,13 @@ impl Solution for Day5 {
             operations.push(next_op.expect("Should be able to parse moves"));
         }
 
-        let state = State::try_from((stack_layers, operations));
-        let new_state = state
-            .expect("Should be able to construct initial state")
-            .apply_moves();
-        println!("Part one: {:#?}", new_state.tots())
+        let state = State::try_from((stack_layers, operations))
+            .expect("Should be able to construct initial state");
+        let new_state = state.apply_moves(CraneModel::Model9000);
+        println!("Part one: {:#?}", new_state.tots());
+
+        let new_state2 = state.apply_moves(CraneModel::Model9001);
+        println!("Part two: {:#?}", new_state2.tots());
     }
 }
 
