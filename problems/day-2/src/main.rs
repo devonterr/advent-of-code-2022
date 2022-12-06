@@ -1,8 +1,5 @@
 use shared::{read_lines, AoCProblem, AoCSolution, Solution};
 
-static INPUT_FILE_NAME: &str = "data/day-2/input.txt";
-static TEST_INPUT_FILE_NAME: &str = "data/day-2/test.txt";
-
 #[derive(Clone)]
 enum Outcome {
     Win,
