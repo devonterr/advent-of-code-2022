@@ -15,3 +15,9 @@ The project is structured using Cargo's Workspaces feature. A single shared lib 
 Assumes that you have `cargo` installed and available on your path.
 
 - `cargo run -p day-{n}`: Run the solution for day `n`
+
+## Starting a new day
+- `./new-day.sh <day-number>`
+  + Generates new bin crate, imports the shared lib crate, and and sets up dependencies
+- Download day's test and problem data, save to `data/day-{n}/test.txt` and `data/day-{n}/input.txt`
+- Implement the `AoCProblem` and `Solution` traits
