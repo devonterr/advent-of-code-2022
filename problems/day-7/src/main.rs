@@ -83,7 +83,7 @@ impl Solution for Day7 {
         let free = capacity - sums.get("").expect("Root size should exist");
         let update_size = 30000000;
         let to_free = update_size - free;
-        let (to_delete, will_free) = sums
+        let (_to_delete, will_free) = sums
             .iter()
             .sorted_by_key(|kv| kv.1)
             .filter(|kv| *kv.1 > to_free)
