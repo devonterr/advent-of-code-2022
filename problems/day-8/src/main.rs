@@ -3,13 +3,13 @@ use std::collections::{HashMap, HashSet};
 use shared::{read_lines, AoCProblem, AoCSolution, Solution};
 
 // For a given direction, an index is visible if no prior value is greater
-fn visible_from_outside(run: Vec<((usize, usize), i32)>) -> HashSet<(usize, usize)> {
-    let mut result = HashSet::new();
+fn visible_from_outside(run: Vec<((usize, usize), i32)>) -> Vec<(usize, usize)> {
+    let mut result = vec![];
     let mut max_in_run: i32 = -1;
 
     for (idx, value) in run {
         if value > max_in_run {
-            result.insert(idx);
+            result.push(idx);
             max_in_run = value;
         }
     }
@@ -17,8 +17,8 @@ fn visible_from_outside(run: Vec<((usize, usize), i32)>) -> HashSet<(usize, usiz
     result
 }
 
-fn visible_from_any_side(grid: Vec<Vec<((usize, usize), i32)>>) -> HashSet<(usize, usize)> {
-    let mut result = HashSet::new();
+fn visible_from_any_side(grid: Vec<Vec<((usize, usize), i32)>>) -> Vec<(usize, usize)> {
+    let mut result = vec![];
     for run in grid {
         let visible_in_run = visible_from_outside(run);
         result.extend(visible_in_run);
