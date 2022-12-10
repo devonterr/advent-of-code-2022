@@ -1,7 +1,7 @@
 use shared::{read_lines, AoCProblem, AoCSolution, Solution};
 use std::{collections::HashSet, iter::repeat};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 enum Direction {
     UP,
     DOWN,
@@ -9,7 +9,7 @@ enum Direction {
     RIGHT,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Command(Direction, usize);
 impl TryFrom<String> for Command {
     type Error = String;
@@ -59,6 +59,20 @@ impl VisitState {
             visited: HashSet::from_iter(vec![Position(0, 0)]),
         }
     }
+    fn updated_position(lead: Position, tail: Position) -> Position {
+        // If they are in the same row or column, move one to match
+        // Otherwise move diagonally to touch
+        if lead.0 == tail.0 || lead.1 == tail.1 {
+            let delta_y = (lead.1 - tail.1) / 2;
+            let delta_x = (lead.0 - tail.0) / 2;
+            Position(tail.0 + delta_x, tail.1 + delta_y)
+        } else {
+            // We know we're moving diagonally, but we need to figure out signs.
+            let delta_x = if lead.0 > tail.0 { 1 } else { -1 };
+            let delta_y = if lead.1 > tail.1 { 1 } else { -1 };
+            Position(tail.0 + delta_x, tail.1 + delta_y)
+        }
+    }
     fn visit(&mut self, command: Command) {
         let previous_head = self.nodes[0].clone();
         let mut new_head = match command {
@@ -74,12 +88,7 @@ impl VisitState {
             let new_tail = if new_head.adjacent(&previous_tail) {
                 previous_tail.clone()
             } else {
-                match command.0 {
-                    Direction::UP => Position(new_head.0, new_head.1 - 1),
-                    Direction::DOWN => Position(new_head.0, new_head.1 + 1),
-                    Direction::LEFT => Position(new_head.0 + 1, new_head.1),
-                    Direction::RIGHT => Position(new_head.0 - 1, new_head.1),
-                }
+                Self::updated_position(new_head, previous_tail)
             };
             updated_nodes.push(new_tail.clone());
             new_head = new_tail;
@@ -118,17 +127,16 @@ impl Solution for Day9 {
         }
         println!("Part one: {:#?}", visit_state.visited.len());
 
-        // TODO - Visiting too many spots for the tail
         let mut visit_state_2 = VisitState::new(10);
-        for command in commands {
-            visit_state_2.visit(command);
+        for command in commands.iter() {
+            visit_state_2.visit(command.to_owned());
         }
-        println!("{:#?}", visit_state_2.visited);
         println!("Part two: {:#?}", visit_state_2.visited.len());
     }
 }
 
 fn main() {
-    // Day9 {}.test_and_run()
-    Day9 {}.test()
+    Day9 {}.test();
+    Day9 {}.solution("data/day-9/test2.txt");
+    Day9 {}.run();
 }
