@@ -47,42 +47,51 @@ impl Position {
 
 #[derive(Debug)]
 struct VisitState {
-    previous_head: Position,
-    previous_tail: Position,
+    nodes: Vec<Position>,
     visited: HashSet<Position>,
 }
 impl VisitState {
-    fn new() -> Self {
+    fn new(node_count: usize) -> Self {
         VisitState {
-            previous_head: Position(0, 0),
-            previous_tail: Position(0, 0),
+            nodes: repeat(Position(0, 0))
+                .take(node_count)
+                .collect::<Vec<Position>>(),
             visited: HashSet::from_iter(vec![Position(0, 0)]),
         }
     }
     fn visit(&mut self, command: Command) {
-        let new_head = match command {
-            Command(Direction::UP, _) => Position(self.previous_head.0, self.previous_head.1 + 1),
-            Command(Direction::DOWN, _) => Position(self.previous_head.0, self.previous_head.1 - 1),
-            Command(Direction::LEFT, _) => Position(self.previous_head.0 - 1, self.previous_head.1),
-            Command(Direction::RIGHT, _) => {
-                Position(self.previous_head.0 + 1, self.previous_head.1)
-            }
+        let previous_head = self.nodes[0].clone();
+        let mut new_head = match command {
+            Command(Direction::UP, _) => Position(previous_head.0, previous_head.1 + 1),
+            Command(Direction::DOWN, _) => Position(previous_head.0, previous_head.1 - 1),
+            Command(Direction::LEFT, _) => Position(previous_head.0 - 1, previous_head.1),
+            Command(Direction::RIGHT, _) => Position(previous_head.0 + 1, previous_head.1),
         };
+        let mut updated_nodes = vec![new_head.clone()];
 
-        let new_tail = if new_head.adjacent(&self.previous_tail) {
-            self.previous_tail.clone()
-        } else {
-            match command.0 {
-                Direction::UP => Position(new_head.0, new_head.1 - 1),
-                Direction::DOWN => Position(new_head.0, new_head.1 + 1),
-                Direction::LEFT => Position(new_head.0 + 1, new_head.1),
-                Direction::RIGHT => Position(new_head.0 - 1, new_head.1),
-            }
-        };
+        for i in 1..self.nodes.len() {
+            let previous_tail = self.nodes[i].clone();
+            let new_tail = if new_head.adjacent(&previous_tail) {
+                previous_tail.clone()
+            } else {
+                match command.0 {
+                    Direction::UP => Position(new_head.0, new_head.1 - 1),
+                    Direction::DOWN => Position(new_head.0, new_head.1 + 1),
+                    Direction::LEFT => Position(new_head.0 + 1, new_head.1),
+                    Direction::RIGHT => Position(new_head.0 - 1, new_head.1),
+                }
+            };
+            updated_nodes.push(new_tail.clone());
+            new_head = new_tail;
+        }
 
-        self.visited.insert(new_tail.clone());
-        self.previous_head = new_head;
-        self.previous_tail = new_tail;
+        self.visited.insert(
+            updated_nodes
+                .last()
+                .expect("Should be a last element")
+                .to_owned(),
+        );
+        self.nodes = updated_nodes;
     }
 }
 
@@ -103,14 +112,23 @@ impl Solution for Day9 {
             // Turn e.g. (R, 1) into [(R, 1), (R,1), (R, 1)] to make them easier to process
             .flat_map(|c| repeat(Command(c.0, 1)).take(c.1))
             .collect();
-        let mut visit_state = VisitState::new();
-        for command in commands {
+        let mut visit_state = VisitState::new(2);
+        for command in commands.clone() {
             visit_state.visit(command);
         }
         println!("Part one: {:#?}", visit_state.visited.len());
+
+        // TODO - Visiting too many spots for the tail
+        let mut visit_state_2 = VisitState::new(10);
+        for command in commands {
+            visit_state_2.visit(command);
+        }
+        println!("{:#?}", visit_state_2.visited);
+        println!("Part two: {:#?}", visit_state_2.visited.len());
     }
 }
 
 fn main() {
-    Day9 {}.test_and_run()
+    // Day9 {}.test_and_run()
+    Day9 {}.test()
 }
