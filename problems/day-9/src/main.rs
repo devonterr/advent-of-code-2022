@@ -41,7 +41,7 @@ impl Position {
         let x_delta = other.0 - self.0;
         let y_delta = other.1 - self.1;
 
-        (x_delta <= 1 && x_delta >= -1) && (y_delta <= 1 && y_delta >= -1)
+        (-1..=1).contains(&x_delta) && (-1..=1).contains(&y_delta)
     }
 }
 

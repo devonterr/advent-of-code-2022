@@ -48,7 +48,7 @@ where
 {
     let mut result = vec![];
     for row in grid {
-        result.push(row.iter().rev().map(|c| c.clone()).collect());
+        result.push(row.iter().rev().cloned().collect());
     }
     result
 }
@@ -115,7 +115,7 @@ impl Solution for Day8 {
         let right_to_left = flipped(index(grid.clone()));
         let left_to_right = index(grid.clone());
         let top_to_bottom = rotated(index(grid.clone()));
-        let bottom_to_top = flipped(rotated(index(grid.clone())));
+        let bottom_to_top = flipped(rotated(index(grid)));
 
         let mut visible_trees = HashSet::new();
         visible_trees.extend(visible_from_any_side(right_to_left.clone()));
@@ -126,10 +126,10 @@ impl Solution for Day8 {
         println!("Part One: {:#?}", visible_trees.len());
 
         let mut view_scores = vec![];
-        view_scores.extend(all_view_scores(right_to_left.clone()));
-        view_scores.extend(all_view_scores(left_to_right.clone()));
-        view_scores.extend(all_view_scores(top_to_bottom.clone()));
-        view_scores.extend(all_view_scores(bottom_to_top.clone()));
+        view_scores.extend(all_view_scores(right_to_left));
+        view_scores.extend(all_view_scores(left_to_right));
+        view_scores.extend(all_view_scores(top_to_bottom));
+        view_scores.extend(all_view_scores(bottom_to_top));
 
         let mut aggregated_view_scores: HashMap<(usize, usize), usize> = HashMap::new();
         for view_score in view_scores {

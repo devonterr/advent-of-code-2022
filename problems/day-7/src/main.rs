@@ -8,7 +8,7 @@ where
     V: Copy,
 {
     let segments = path
-        .split("/")
+        .split('/')
         .map(|h| h.to_owned())
         .collect::<Vec<String>>();
     let mut result = vec![];
@@ -49,7 +49,7 @@ impl Solution for Day7 {
                     .split_once(' ')
                     .expect("Should be able to parse file line");
                 let mut key = current_path_segments.join("/");
-                key.push_str("/");
+                key.push('/');
                 key.push_str(file_name);
                 let file_size = raw_file_size
                     .parse::<u64>()
@@ -69,7 +69,7 @@ impl Solution for Day7 {
         }
         let sums_under_100000 = sums
             .iter()
-            .filter(|kv| kv.1.to_owned() <= 100000)
+            .filter(|kv| *kv.1 <= 100000)
             .collect::<HashMap<&String, &u64>>();
         println!(
             "Part 1: {:#?}",
@@ -85,9 +85,7 @@ impl Solution for Day7 {
         let to_free = update_size - free;
         let (_to_delete, will_free) = sums
             .iter()
-            .sorted_by_key(|kv| kv.1)
-            .filter(|kv| *kv.1 > to_free)
-            .next()
+            .sorted_by_key(|kv| kv.1).find(|kv| *kv.1 > to_free)
             .expect("Should be a directory with enough space to free");
         println!("Part 2: {:#?}", will_free);
     }

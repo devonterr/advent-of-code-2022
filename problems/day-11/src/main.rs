@@ -169,7 +169,7 @@ impl Solution for Day11 {
         process_rounds(&mut states, 20, |x| x / 3);
         println!("Part One: {:#?}", answer(states));
 
-        let mut states_2 = initial_states.clone();
+        let mut states_2 = initial_states;
         let least_common_multiple = all_lcm(states_2.iter().map(|s| s.test).collect::<Vec<u64>>());
         process_rounds(&mut states_2, 10000, |x| x % least_common_multiple);
         println!("Part Two: {:#?}", answer(states_2));
