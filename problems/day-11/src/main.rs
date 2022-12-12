@@ -1,28 +1,33 @@
 use shared::{all_lcm, read_lines, AoCProblem, AoCSolution, Solution};
 
-fn process_rounds<T>(states: &mut Vec<MonkeyState>, n: u64, normalize: T)
-where
-    T: Fn(u64) -> u64,
-{
-    for _ in 0..n {
-        for i in 0..states.len() {
-            let send_items_to = states[i].process_items(&normalize);
-            apply_state_updates(states, send_items_to);
+trait MonkeyProcessor {
+    fn process_rounds<T: Fn(u64) -> u64>(&mut self, n: u64, normalize: T);
+    fn answer(&self) -> u64;
+    fn apply_state_updates(&mut self, items_to_send: Vec<(u64, u64)>);
+}
+
+impl MonkeyProcessor for Vec<MonkeyState> {
+    fn process_rounds<T: Fn(u64) -> u64>(&mut self, n: u64, normalize: T) {
+        for _ in 0..n {
+            for i in 0..self.len() {
+                let send_items_to = self[i].process_items(&normalize);
+                self.apply_state_updates(send_items_to);
+            }
         }
     }
-}
 
-fn answer(states: Vec<MonkeyState>) -> u64 {
-    let mut part_two_results = states.iter().map(|s| s.inspections).collect::<Vec<u64>>();
-    part_two_results.sort();
-    part_two_results.reverse();
-    part_two_results.iter().take(2).product()
-}
+    fn answer(&self) -> u64 {
+        let mut part_two_results = self.iter().map(|s| s.inspections).collect::<Vec<u64>>();
+        part_two_results.sort();
+        part_two_results.reverse();
+        part_two_results.iter().take(2).product()
+    }
 
-fn apply_state_updates(states: &mut Vec<MonkeyState>, items_to_send: Vec<(u64, u64)>) {
-    for (item, address_u64) in items_to_send {
-        let address = address_u64 as usize;
-        states[address].receive(item);
+    fn apply_state_updates(&mut self, items_to_send: Vec<(u64, u64)>) {
+        for (item, address_u64) in items_to_send {
+            let address = address_u64 as usize;
+            self[address].receive(item);
+        }
     }
 }
 
@@ -164,15 +169,15 @@ impl Solution for Day11 {
             .map(MonkeyState::try_from)
             .map(|ms| ms.expect("Should be able to parse monkey state"))
             .collect();
-        let mut states = initial_states.clone();
 
-        process_rounds(&mut states, 20, |x| x / 3);
-        println!("Part One: {:#?}", answer(states));
+        let mut states = initial_states.clone();
+        states.process_rounds(20, |x| x / 3);
+        println!("Part One: {:#?}", states.answer());
 
         let mut states_2 = initial_states;
         let least_common_multiple = all_lcm(states_2.iter().map(|s| s.test).collect::<Vec<u64>>());
-        process_rounds(&mut states_2, 10000, |x| x % least_common_multiple);
-        println!("Part Two: {:#?}", answer(states_2));
+        states_2.process_rounds(10000, |x| x % least_common_multiple);
+        println!("Part Two: {:#?}", states_2.answer());
     }
 }
 
