@@ -84,6 +84,30 @@ where
     }
 }
 
+pub fn gcd(mut a: u64, mut b: u64) -> u64 {
+    loop {
+        let new_a = b;
+        let new_b = a % b;
+        if new_b == 0 {
+            return new_a;
+        }
+        a = new_a;
+        b = new_b;
+    }
+}
+
+pub fn lcm(a: u64, b: u64) -> u64 {
+    a * b / gcd(a.to_owned(), b.to_owned())
+}
+
+pub fn all_lcm(values: Vec<u64>) -> u64 {
+    let mut result = 1;
+    for i in values {
+        result = lcm(result, i);
+    }
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
