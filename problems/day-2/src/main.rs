@@ -52,7 +52,7 @@ struct Round {
 }
 impl Round {
     fn score(&self) -> i32 {
-        &self.player_play.score() + &self.outcome.score()
+        self.player_play.score() + self.outcome.score()
     }
 }
 

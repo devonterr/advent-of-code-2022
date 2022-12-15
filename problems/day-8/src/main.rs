@@ -74,9 +74,9 @@ fn view_score(run: Vec<((usize, usize), i32)>) -> Vec<((usize, usize), usize)> {
     for start in 0..run.len() {
         let (start_position, start_height) = run[start];
         let mut score = 0;
-        for idx_to_check in start + 1..run.len() {
+        for run_item in run.iter().skip(1) {
             score += 1;
-            let height_to_check = run[idx_to_check].1;
+            let height_to_check = run_item.1;
             if height_to_check >= start_height {
                 break;
             }

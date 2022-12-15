@@ -3,10 +3,10 @@ use std::{collections::HashSet, iter::repeat};
 
 #[derive(Clone, Debug)]
 enum Direction {
-    UP,
-    DOWN,
-    LEFT,
-    RIGHT,
+    Up,
+    Down,
+    Left,
+    Right,
 }
 
 #[derive(Clone, Debug)]
@@ -20,10 +20,10 @@ impl TryFrom<String> for Command {
             .split_once(' ')
             .ok_or("Unable to split on ' '; each line should have a space in it")?;
         let direction = match parts.0 {
-            "R" => Ok(Direction::RIGHT),
-            "L" => Ok(Direction::LEFT),
-            "U" => Ok(Direction::UP),
-            "D" => Ok(Direction::DOWN),
+            "R" => Ok(Direction::Right),
+            "L" => Ok(Direction::Left),
+            "U" => Ok(Direction::Up),
+            "D" => Ok(Direction::Down),
             _ => Err("Unrecognized direction"),
         }?;
         let distance = parts
@@ -76,10 +76,10 @@ impl VisitState {
     fn visit(&mut self, command: Command) {
         let previous_head = self.nodes[0].clone();
         let mut new_head = match command {
-            Command(Direction::UP, _) => Position(previous_head.0, previous_head.1 + 1),
-            Command(Direction::DOWN, _) => Position(previous_head.0, previous_head.1 - 1),
-            Command(Direction::LEFT, _) => Position(previous_head.0 - 1, previous_head.1),
-            Command(Direction::RIGHT, _) => Position(previous_head.0 + 1, previous_head.1),
+            Command(Direction::Up, _) => Position(previous_head.0, previous_head.1 + 1),
+            Command(Direction::Down, _) => Position(previous_head.0, previous_head.1 - 1),
+            Command(Direction::Left, _) => Position(previous_head.0 - 1, previous_head.1),
+            Command(Direction::Right, _) => Position(previous_head.0 + 1, previous_head.1),
         };
         let mut updated_nodes = vec![new_head.clone()];
 

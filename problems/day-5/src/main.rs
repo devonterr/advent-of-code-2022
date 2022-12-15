@@ -99,7 +99,7 @@ impl State {
                     .chars()
                     .last()
                     .map(|c| c.to_string())
-                    .unwrap_or("".to_owned())
+                    .unwrap_or_else(|| "".to_owned())
             })
             .collect::<String>()
     }
@@ -117,12 +117,10 @@ impl TryFrom<(Vec<StackLayer>, Vec<Operation>)> for State {
             .collect::<Vec<Vec<char>>>();
         // Populate them top-down with non-None chars
         for layer in &value.0 {
-            let mut idx = 0;
-            for v in &layer.0 {
+            for (idx, v) in layer.0.iter().enumerate() {
                 if v.is_some() {
                     stacks[idx].push(v.unwrap())
                 }
-                idx += 1
             }
         }
         // Reverse, so the tops are at the ends
@@ -154,10 +152,10 @@ impl Solution for Day5 {
         // Try to parse a stack layer
         for next_line in lines.by_ref() {
             let layer = StackLayer::try_from(&next_line);
-            if layer.is_err() {
-                break;
+            if let Ok(inner_layer) = layer {
+                stack_layers.push(inner_layer);
             } else {
-                stack_layers.push(layer.unwrap());
+                break;
             }
         }
         // Once that failes, indicating that we've hit a blank line, swap to parsing moves

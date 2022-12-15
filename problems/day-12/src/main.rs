@@ -65,7 +65,7 @@ impl Grid {
 
     fn in_bounds(&self, c: Coordinate) -> bool {
         let Coordinate(x, y) = c;
-        x >= 0 && y >= 0 && y < self.nodes.len() && x < self.nodes[0].len()
+        y < self.nodes.len() && x < self.nodes[0].len()
     }
 
     fn neighbors<T>(
@@ -110,8 +110,7 @@ impl Grid {
         let mut is_empty: bool = candidates.is_empty();
         while !is_empty {
             let mut next_candidates: Vec<Vec<Coordinate>> = vec![];
-            for i in 0..candidates.len() {
-                let candidate = &candidates[i];
+            for candidate in &candidates {
                 if results.contains_key(&candidate[0]) {
                     continue;
                 }
@@ -169,8 +168,7 @@ impl Solution for Day12 {
         let starts = grid.find_starts();
         println!(
             "Part two: {:#?}",
-            grid.shortest_paths(starts, end, |c1, c2| grid
-                .one_step_condition(c1, c2))
+            grid.shortest_paths(starts, end, |c1, c2| grid.one_step_condition(c1, c2))
         );
     }
 }
