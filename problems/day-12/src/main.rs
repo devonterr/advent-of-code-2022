@@ -169,7 +169,7 @@ impl Solution for Day12 {
         let starts = grid.find_starts();
         println!(
             "Part two: {:#?}",
-            grid.shortest_paths(starts, end.clone(), |c1, c2| grid
+            grid.shortest_paths(starts, end, |c1, c2| grid
                 .one_step_condition(c1, c2))
         );
     }
