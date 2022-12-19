@@ -26,38 +26,96 @@ fn interpolate(start: Point, to: Point) -> Vec<Point> {
     result
 }
 
-fn settle(lower_bound: i64, occupied: &HashSet<Point>, sand: Point) -> Option<Point> {
-    let one_down = (sand.0, sand.1 + 1);
-    let down_left = (sand.0 - 1, sand.1 + 1);
-    let down_right = (sand.0 + 1, sand.1 + 1);
-    if one_down.1 > lower_bound {
-        None
-    } else if !occupied.contains(&one_down) {
-        settle(lower_bound, occupied, one_down)
-    } else if !occupied.contains(&down_left) {
-        settle(lower_bound, occupied, down_left)
-    } else if !occupied.contains(&down_right) {
-        settle(lower_bound, occupied, down_right)
-    } else {
-        Some(sand)
+fn settle<F>(
+    lower_bound: i64,
+    occupied: &HashSet<Point>,
+    sand: Point,
+    handle_bounds: F,
+) -> Option<Point>
+where
+    F: Fn(Point) -> Option<Point>,
+{
+    let mut next_node = sand;
+    loop {
+        let one_down = (next_node.0, next_node.1 + 1);
+        let down_left = (next_node.0 - 1, next_node.1 + 1);
+        let down_right = (next_node.0 + 1, next_node.1 + 1);
+
+        if one_down.1 > lower_bound {
+            return handle_bounds(next_node);
+        } else if !occupied.contains(&one_down) {
+            next_node = one_down;
+        } else if !occupied.contains(&down_left) {
+            next_node = down_left;
+        } else if !occupied.contains(&down_right) {
+            next_node = down_right;
+        } else {
+            return Some(next_node)
+        }
     }
 }
 
-fn settle2(lower_bound: i64, occupied: &HashSet<Point>, sand: Point) -> Option<Point> {
-    let one_down = (sand.0, sand.1 + 1);
-    let down_left = (sand.0 - 1, sand.1 + 1);
-    let down_right = (sand.0 + 1, sand.1 + 1);
-    if one_down.1 == lower_bound {
-        Some(sand)
-    } else if !occupied.contains(&one_down) {
-        settle2(lower_bound, occupied, one_down)
-    } else if !occupied.contains(&down_left) {
-        settle2(lower_bound, occupied, down_left)
-    } else if !occupied.contains(&down_right) {
-        settle2(lower_bound, occupied, down_right)
-    } else {
-        Some(sand)
+fn part_solution<F, G>(prefix: String, path: &str, bounds_finder: F, bounds_handler: G)
+where
+    F: Fn(i64) -> i64,
+    G: Fn(Point) -> Option<Point>,
+{
+    let mut occupied_points = read_lines(path)
+        .expect("Should be able to read")
+        .map(|line| line.expect("Should be able to read lines"))
+        .map(|line| {
+            line.clone()
+                .split(" -> ")
+                .map(|p| {
+                    let parts = p.split_once(',').expect("Should have one comma");
+                    let x = parts
+                        .0
+                        .parse::<i64>()
+                        .expect("Should be able to parse x coord");
+                    let y = parts
+                        .1
+                        .parse::<i64>()
+                        .expect("Should be able to parse y coord");
+                    (x, y)
+                })
+                .collect::<Vec<Point>>()
+        })
+        .flat_map(|path_segments| {
+            path_segments
+                .windows(2)
+                .flat_map(|segment_pair| interpolate(segment_pair[0], segment_pair[1]))
+                .collect::<Vec<Point>>()
+        })
+        .collect::<HashSet<Point>>();
+
+    let lower_bound = bounds_finder(
+        occupied_points
+            .iter()
+            .map(|kv| kv.1)
+            .max()
+            .expect("Should have a max value"),
+    );
+
+    let mut counter = 0;
+    loop {
+        let res = settle(lower_bound, &occupied_points, SOURCE, &bounds_handler);
+        // If settle returns None, then we've gone off the deep end
+        // (Part 1)
+        if res.is_none() {
+            break;
+        } else {
+            let inner = res.unwrap();
+            occupied_points.insert(inner);
+            // If settle returns SOURCE then that means we've backed up
+            // to the source point. (Part 2)
+            if SOURCE == inner {
+                counter += 1;
+                break;
+            }
+        }
+        counter += 1;
     }
+    println!("Part {}: {}", prefix, counter);
 }
 
 struct Day14 {}
@@ -68,108 +126,8 @@ impl AoCProblem for Day14 {
 }
 impl Solution for Day14 {
     fn solution(&self, path: &str) {
-        {
-            let mut occupied_points = read_lines(path)
-                .expect("Should be able to read")
-                .map(|line| line.expect("Should be able to read lines"))
-                .map(|line| {
-                    line.clone()
-                        .split(" -> ")
-                        .map(|p| {
-                            let parts = p.split_once(',').expect("Should have one comma");
-                            let x = parts
-                                .0
-                                .parse::<i64>()
-                                .expect("Should be able to parse x coord");
-                            let y = parts
-                                .1
-                                .parse::<i64>()
-                                .expect("Should be able to parse y coord");
-                            (x, y)
-                        })
-                        .collect::<Vec<Point>>()
-                })
-                .flat_map(|path_segments| {
-                    path_segments
-                        .windows(2)
-                        .flat_map(|segment_pair| interpolate(segment_pair[0], segment_pair[1]))
-                        .collect::<Vec<Point>>()
-                })
-                .collect::<HashSet<Point>>();
-
-            let lower_bound = occupied_points
-                .iter()
-                .map(|kv| kv.1)
-                .max()
-                .expect("Should have a max value");
-
-            let mut counter = 0;
-            loop {
-                let res = settle(lower_bound, &occupied_points, (500, 0));
-                if res.is_none() {
-                    break;
-                } else {
-                    occupied_points.insert(res.unwrap());
-                }
-                counter += 1;
-            }
-            println!("Part one: {}", counter);
-        }
-        {
-            let mut occupied_points = read_lines(path)
-                .expect("Should be able to read")
-                .map(|line| line.expect("Should be able to read lines"))
-                .map(|line| {
-                    line.clone()
-                        .split(" -> ")
-                        .map(|p| {
-                            let parts = p.split_once(',').expect("Should have one comma");
-                            let x = parts
-                                .0
-                                .parse::<i64>()
-                                .expect("Should be able to parse x coord");
-                            let y = parts
-                                .1
-                                .parse::<i64>()
-                                .expect("Should be able to parse y coord");
-                            (x, y)
-                        })
-                        .collect::<Vec<Point>>()
-                })
-                .flat_map(|path_segments| {
-                    path_segments
-                        .windows(2)
-                        .flat_map(|segment_pair| interpolate(segment_pair[0], segment_pair[1]))
-                        .collect::<Vec<Point>>()
-                })
-                .collect::<HashSet<Point>>();
-
-            let lower_bound = occupied_points
-                .iter()
-                .map(|kv| kv.1)
-                .max()
-                .expect("Should have a max value")+2;
-
-            let mut counter = 0;
-            loop {
-                let res = settle2(lower_bound, &occupied_points, (500, 0));
-                match res {
-                    Some(p) => {
-                        occupied_points.insert(p);
-                        if (500, 0) == p {
-                            counter += 1;
-                            break;
-                        }
-                    },
-                    _ => {
-                        println!("Shouldn't happen");
-                        break;
-                    }
-                }
-                counter += 1;
-            }
-            println!("Part two: {}", counter);
-        }
+        part_solution("one".to_owned(), path, |i| i, |_point| None);
+        part_solution("two".to_owned(), path, |i| i + 1, |point| Some(point));
     }
 }
 
