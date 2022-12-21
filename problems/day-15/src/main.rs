@@ -4,11 +4,10 @@ use shared::{read_lines, AoCProblem, AoCSolution, Solution};
 
 // TODO
 // Let's try a different strategy
-// Instead of instantiating points, on a line or no, lets construct
-// all of the circle centers, distances, and a hashset of beacons.
-// The solutions will iterate over candidate points and check distances
+// Can we do this with just interval arithmetic?
 
-fn line_to_points(line: &str, on_line: i64) -> (HashSet<Point>, Point) {
+// Returns Center, Distance, and Beacon
+fn line_to_points(line: &str) -> (Point, usize, Point) {
     let (x0, rest) = line
         .trim_start_matches("Sensor at x=")
         .split_once(',')
@@ -27,69 +26,40 @@ fn line_to_points(line: &str, on_line: i64) -> (HashSet<Point>, Point) {
         x: x0.parse::<i64>().expect("Should be able to parse x0"),
         y: y0.parse::<i64>().expect("Should be able to parse y0"),
     };
-    let till = Point {
+    let beacon = Point {
         x: x1.parse::<i64>().expect("Should be able to parse x1"),
         y: y1.parse::<i64>().expect("Should be able to parse y1"),
     };
-    (
-        start.circle_part(start.distance(till.clone()), on_line),
-        till,
-    )
+    (start, start.distance(&beacon), beacon)
 }
 
-fn count_covered_points(points: &HashSet<Point>, beacons: &HashSet<Point>) -> usize {
-    points.difference(&beacons).into_iter().count()
-}
+// fn count_covered_points(points: &HashSet<Point>, beacons: &HashSet<Point>) -> usize {
+//     points.difference(&beacons).into_iter().count()
+// }
 
-#[derive(Hash, PartialEq, Eq, Debug, Clone)]
+#[derive(Hash, PartialEq, Eq, Debug, Clone, Copy)]
 struct Point {
     x: i64,
     y: i64,
 }
 impl Point {
-    fn distance(&self, to: Point) -> usize {
+    fn distance(&self, to: &Point) -> usize {
         let x_distance = (to.x - self.x).abs();
         let y_distance = (to.y - self.y).abs();
         (x_distance + y_distance) as usize
     }
 
-    fn circle_part(&self, distance: usize, line: i64) -> HashSet<Point> {
-        let distance = distance as i64;
-        // Check if line is within distance of point
-        let is_line_within_distance = (line - self.y).abs() <= distance;
-        // If not, return empty set
-        if !is_line_within_distance {
-            HashSet::new()
-        } else {
-            // If so, iterate through all options that include that line
-            let mut result: Vec<Point> = vec![];
-            let y = line;
-            let remaining_distance = (distance as i64) - (line - self.y).abs();
-            for x in (-remaining_distance)..(remaining_distance + 1) {
-                let new_point = Point {
-                    x: self.x + x,
-                    y,
-                };
-                result.push(new_point);
-            }
-            HashSet::from_iter(result)
+    fn line(&self, distance: usize, on_line: i64) -> Vec<Point> {
+        let y = on_line;
+        let remaining_distance = (distance as i64) - (on_line - self.y).abs();
+        let mut result = vec![];
+        for delta_x in (-remaining_distance)..(remaining_distance + 1) {
+            result.push(Point {
+                x: self.x + delta_x,
+                y,
+            });
         }
-    }
-
-    fn circle(&self, distance: usize) -> HashSet<Point>
-    {
-        let distance = distance as i64;
-        let mut result: Vec<Point> = vec![];
-        for x in (-distance)..(distance + 1) {
-            let remaining_distance = (distance as i64) - x.abs();
-            for y in (-remaining_distance)..(remaining_distance + 1) {
-                result.push(Point {
-                    x: self.x + x,
-                    y: self.y + y,
-                })
-            }
-        }
-        HashSet::from_iter(result)
+        result
     }
 }
 
@@ -101,31 +71,21 @@ mod tests {
     fn should_computeDistance() {
         let p = Point { x: 8, y: 7 };
         let b = Point { x: 2, y: 10 };
-        let result = p.distance(b);
+        let result = p.distance(&b);
         assert_eq!(result, 9, "Distance should be 9");
     }
 
     #[test]
-    fn should_computeCircle() {
-        let p = Point { x: 8, y: 7 };
-        let distance = 9;
-        let circle = p.circle(distance);
+    fn should_computeLine() {
+        let a = Point { x: 8, y: 7 };
+        let d = 1;
+        let result = a.line(d, 7);
+        assert_eq!(result.len(), 3);
 
-        assert!(circle.contains(&Point { x: -1, y: 7 }));
-        assert!(circle.contains(&Point { x: 17, y: 7 }));
-        assert!(circle.contains(&Point { x: 8, y: -1 }));
-        assert!(circle.contains(&Point { x: 8, y: 16 }));
-
-        assert_eq!(circle.len(), 181, "Should have 221 elements");
-    }
-
-    #[test]
-    fn should_computePartialCircle() {
-        let p = Point { x: 8, y: 7 };
-        let distance = 3;
-        let circle = p.circle_part(distance, 9);
-
-        assert_eq!(circle.len(), 3);
+        let a = Point { x: 8, y: 7 };
+        let d = 2;
+        let result = a.line(d, 8);
+        assert_eq!(result.len(), 3);
     }
 }
 
@@ -141,70 +101,43 @@ impl Solution for Day15 {
             .expect("Should be able to read file")
             .map(|line| line.expect("Should be able to read line"))
             .collect::<Vec<String>>();
-        // {
-        //     let mut covered_points = HashSet::new();
-        //     let mut beacons = HashSet::new();
 
-        //     for (cp, b) in lines.iter().map(|line| line_to_points(line, 10)) {
-        //         covered_points.extend(cp);
-        //         beacons.insert(b);
-        //     }
-        //     let non_beacon_points_at_10 = count_covered_points(&covered_points, &beacons);
-        //     println!("Part 1 - test: {}", non_beacon_points_at_10);
-
-        //     // Part 2
-        //     let mut covered_points = HashSet::new();
-        //     let mut beacons = HashSet::new();
-
-        //     //// Populate occupied positions and beacons
-        //     for to_check in 0..21 {
-        //         for (cp, b) in lines.iter().map(|line| line_to_points(line, to_check)) {
-        //             covered_points.extend(cp);
-        //             beacons.insert(b);
-        //         }
-        //     }
-
-        //     // Check every point in the range
-        //     for x in 0..21 {
-        //         for y in 0..21 {
-        //             let candidate = Point{x, y};
-        //             if !covered_points.contains(&candidate) && !beacons.contains(&candidate) {
-        //                 println!("Part 2: {:#?} - {}", candidate, (4000000 * candidate.x) + candidate.y);
-        //                 return;
-        //             }
-        //         }
-        //     }
-        // }
+        let on_line = if lines.len() > 20 { 2000000 } else { 10 };
 
         {
-            // let mut covered_points = HashSet::new();
-            // let mut beacons = HashSet::new();
-
-            // for (cp, b) in lines.iter().map(|line| line_to_points(line, 2000000)) {
-            //     covered_points.extend(cp);
-            //     beacons.insert(b);
-            // }
-            // let non_beacon_points_at_2000000 = count_covered_points(&covered_points, &beacons);
-            // println!("Part 1 - run: {}", non_beacon_points_at_2000000);
-
-            // Part 2
-            let mut covered_points = HashSet::new();
+            let circles_and_beacons = lines
+                .iter()
+                .map(|line| line_to_points(line))
+                .collect::<Vec<(Point, usize, Point)>>();
+            let mut covered = HashSet::new();
             let mut beacons = HashSet::new();
-
-            //// Populate occupied positions and beacons
-            for to_check in 0..4000000 {
-                for (cp, b) in lines.iter().map(|line| line_to_points(line, to_check)) {
-                    covered_points.extend(cp);
-                    beacons.insert(b);
-                }
+            for (center, distance, beacon) in circles_and_beacons {
+                let covered_line = center.line(distance, on_line);
+                covered.extend(covered_line);
+                beacons.insert(beacon);
             }
+            let all_covered: HashSet<_> = covered.difference(&beacons).collect();
+            println!("Part 1: {}", all_covered.len());
+        }
 
-            // Check every point in the range
-            for x in 0..4000000 {
-                for y in 0..4000000 {
+        {
+            let circles_and_beacons = lines
+                .iter()
+                .map(|line| line_to_points(line))
+                .collect::<Vec<(Point, usize, Point)>>();
+            let max_bound = 1 + if lines.len() > 20 { 4000000 } else { 20 };
+            for x in 0..max_bound {
+                for y in 0..max_bound {
                     let candidate = Point{x, y};
-                    if !covered_points.contains(&candidate) && !beacons.contains(&candidate) {
-                        println!("Part 2: {:#?} - {}", candidate, (4000000 * candidate.x) + candidate.y);
+                    let mut any_cover = false;
+                    for (center, distance, _beacon) in &circles_and_beacons[0..] {
+                        if center.distance(&candidate) <= *distance {
+                            any_cover = true;
+                            break;
+                        }
+                    }
+                    if !any_cover {
+                        println!("Part 2: {},{} - {}", x, y, (4000000 * x) + y );
                         return;
                     }
                 }
@@ -214,7 +147,7 @@ impl Solution for Day15 {
 }
 
 fn main() {
-    // Day15 {}.test_and_run();
+    Day15 {}.test_and_run();
     // Day15 {}.test();
-    Day15 {}.run();
+    // Day15 {}.run();
 }
