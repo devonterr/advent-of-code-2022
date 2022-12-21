@@ -1,10 +1,15 @@
-use std::collections::HashSet;
+use std::{collections::{HashSet, BTreeSet}, cmp::Ordering};
 
 use shared::{read_lines, AoCProblem, AoCSolution, Solution};
 
-// TODO
-// Let's try a different strategy
-// Can we do this with just interval arithmetic?
+struct Interval {
+    lo: i64,
+    hi: i64,
+}
+impl Interval {}
+struct IntervalSet {
+    intervals: Vec<Interval>,
+}
 
 // Returns Center, Distance, and Beacon
 fn line_to_points(line: &str) -> (Point, usize, Point) {
@@ -33,10 +38,6 @@ fn line_to_points(line: &str) -> (Point, usize, Point) {
     (start, start.distance(&beacon), beacon)
 }
 
-// fn count_covered_points(points: &HashSet<Point>, beacons: &HashSet<Point>) -> usize {
-//     points.difference(&beacons).into_iter().count()
-// }
-
 #[derive(Hash, PartialEq, Eq, Debug, Clone, Copy)]
 struct Point {
     x: i64,
@@ -49,17 +50,10 @@ impl Point {
         (x_distance + y_distance) as usize
     }
 
-    fn line(&self, distance: usize, on_line: i64) -> Vec<Point> {
+    fn line(&self, distance: usize, on_line: i64) -> (i64, Interval<i64>) {
         let y = on_line;
         let remaining_distance = (distance as i64) - (on_line - self.y).abs();
-        let mut result = vec![];
-        for delta_x in (-remaining_distance)..(remaining_distance + 1) {
-            result.push(Point {
-                x: self.x + delta_x,
-                y,
-            });
-        }
-        result
+        (y, Interval::new(self.x - remaining_distance, self.x + remaining_distance))
     }
 }
 
@@ -75,18 +69,18 @@ mod tests {
         assert_eq!(result, 9, "Distance should be 9");
     }
 
-    #[test]
-    fn should_computeLine() {
-        let a = Point { x: 8, y: 7 };
-        let d = 1;
-        let result = a.line(d, 7);
-        assert_eq!(result.len(), 3);
+    // #[test]
+    // fn should_computeLine() {
+    //     let a = Point { x: 8, y: 7 };
+    //     let d = 1;
+    //     let result = a.line(d, 7);
+    //     assert_eq!(result.len(), 3);
 
-        let a = Point { x: 8, y: 7 };
-        let d = 2;
-        let result = a.line(d, 8);
-        assert_eq!(result.len(), 3);
-    }
+    //     let a = Point { x: 8, y: 7 };
+    //     let d = 2;
+    //     let result = a.line(d, 8);
+    //     assert_eq!(result.len(), 3);
+    // }
 }
 
 struct Day15 {}
@@ -109,40 +103,47 @@ impl Solution for Day15 {
                 .iter()
                 .map(|line| line_to_points(line))
                 .collect::<Vec<(Point, usize, Point)>>();
-            let mut covered = HashSet::new();
             let mut beacons = HashSet::new();
+            let mut covered_intervals = vec![];
             for (center, distance, beacon) in circles_and_beacons {
                 let covered_line = center.line(distance, on_line);
-                covered.extend(covered_line);
+                covered_intervals.push(covered_line.1);
                 beacons.insert(beacon);
             }
-            let all_covered: HashSet<_> = covered.difference(&beacons).collect();
-            println!("Part 1: {}", all_covered.len());
+            let all_covered = -(beacons.len() as i64);
+            let mut interval_set = vec![].to_interval_set();
+            interval_set.extend(covered_intervals);
+            // for interval in interval_set.intervals {
+            //     all_covered += interval.hi - interval.lo;
+            // }
+            for interval in interval_set {
+            }
+            println!("Part 1: {}", all_covered);
         }
 
-        {
-            let circles_and_beacons = lines
-                .iter()
-                .map(|line| line_to_points(line))
-                .collect::<Vec<(Point, usize, Point)>>();
-            let max_bound = 1 + if lines.len() > 20 { 4000000 } else { 20 };
-            for x in 0..max_bound {
-                for y in 0..max_bound {
-                    let candidate = Point{x, y};
-                    let mut any_cover = false;
-                    for (center, distance, _beacon) in &circles_and_beacons[0..] {
-                        if center.distance(&candidate) <= *distance {
-                            any_cover = true;
-                            break;
-                        }
-                    }
-                    if !any_cover {
-                        println!("Part 2: {},{} - {}", x, y, (4000000 * x) + y );
-                        return;
-                    }
-                }
-            }
-        }
+    //     {
+    //         let circles_and_beacons = lines
+    //             .iter()
+    //             .map(|line| line_to_points(line))
+    //             .collect::<Vec<(Point, usize, Point)>>();
+    //         let max_bound = 1 + if lines.len() > 20 { 4000000 } else { 20 };
+    //         for x in 0..max_bound {
+    //             for y in 0..max_bound {
+    //                 let candidate = Point{x, y};
+    //                 let mut any_cover = false;
+    //                 for (center, distance, _beacon) in &circles_and_beacons[0..] {
+    //                     if center.distance(&candidate) <= *distance {
+    //                         any_cover = true;
+    //                         break;
+    //                     }
+    //                 }
+    //                 if !any_cover {
+    //                     println!("Part 2: {},{} - {}", x, y, (4000000 * x) + y );
+    //                     return;
+    //                 }
+    //             }
+    //         }
+    //     }
     }
 }
 
