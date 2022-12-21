@@ -1,14 +1,54 @@
-use std::{collections::{HashSet, BTreeSet}, cmp::Ordering};
+use std::{
+    collections::{BTreeSet, HashSet},
+};
 
 use shared::{read_lines, AoCProblem, AoCSolution, Solution};
 
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
 struct Interval {
     lo: i64,
     hi: i64,
 }
-impl Interval {}
+impl Interval {
+    fn overlaps(&self, other: &Interval) -> bool {
+        (self.lo <= other.lo && self.hi >= other.lo)
+            || (self.lo <= other.hi && self.hi >= other.hi)
+            || (other.lo <= self.lo && other.hi >= self.lo)
+            || (other.lo <= self.hi && other.hi >= self.hi)
+    }
+
+    fn merge(&mut self, other: &Interval) {
+        self.hi = self.hi.max(other.hi);
+        self.lo = self.lo.min(other.lo);
+    }
+    
+    fn size(&self) -> i64 {
+        1 + (self.hi - self.lo).abs()
+    }
+}
+#[derive(Debug)]
 struct IntervalSet {
-    intervals: Vec<Interval>,
+    intervals: BTreeSet<Interval>,
+}
+impl IntervalSet {
+    fn new() -> IntervalSet {
+        IntervalSet{intervals: BTreeSet::new()}
+    }
+    fn add(&mut self, mut interval: Interval) {
+        let (overlaps, independent): (Vec<Interval>, Vec<Interval>) =
+            self.intervals.iter().partition(|c| c.overlaps(&interval));
+        for i in overlaps {
+            interval.merge(&i);
+        }
+        let mut result: BTreeSet<Interval> = BTreeSet::new();
+        result.insert(interval.to_owned());
+        result.extend(&independent);
+        self.intervals = result;
+    }
+    
+    fn size(&self) -> i64 {
+        self.intervals.iter().map(|i| i.size()).sum::<i64>()
+    }
 }
 
 // Returns Center, Distance, and Beacon
@@ -50,10 +90,15 @@ impl Point {
         (x_distance + y_distance) as usize
     }
 
-    fn line(&self, distance: usize, on_line: i64) -> (i64, Interval<i64>) {
+    fn line(&self, distance: usize, on_line: i64) -> (i64, Interval) {
         let y = on_line;
         let remaining_distance = (distance as i64) - (on_line - self.y).abs();
-        (y, Interval::new(self.x - remaining_distance, self.x + remaining_distance))
+        let v1 = self.x - remaining_distance;
+        let v2 = self.x + remaining_distance;
+        (
+            y,
+            Interval{lo: v1.min(v2), hi: v1.max(v2)},
+        )
     }
 }
 
@@ -62,25 +107,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn should_computeDistance() {
+    fn should_compute_distance() {
         let p = Point { x: 8, y: 7 };
         let b = Point { x: 2, y: 10 };
         let result = p.distance(&b);
         assert_eq!(result, 9, "Distance should be 9");
     }
 
-    // #[test]
-    // fn should_computeLine() {
-    //     let a = Point { x: 8, y: 7 };
-    //     let d = 1;
-    //     let result = a.line(d, 7);
-    //     assert_eq!(result.len(), 3);
+    #[test]
+    fn should_compute_line() {
+        let a = Point { x: 8, y: 7 };
+        let d = 1;
+        let line = a.y;
+        let (y, interval) = a.line(d, line);
+        assert_eq!(y, line);
+        assert_eq!(interval.size(), 3);
 
-    //     let a = Point { x: 8, y: 7 };
-    //     let d = 2;
-    //     let result = a.line(d, 8);
-    //     assert_eq!(result.len(), 3);
-    // }
+        let a = Point { x: 8, y: 7 };
+        let d = 2;
+        let line = a.y + 1;
+        let (y, interval) = a.line(d, line);
+        assert_eq!(y, line);
+        assert_eq!(interval.size(), 3);
+    }
 }
 
 struct Day15 {}
@@ -98,52 +147,32 @@ impl Solution for Day15 {
 
         let on_line = if lines.len() > 20 { 2000000 } else { 10 };
 
-        {
-            let circles_and_beacons = lines
-                .iter()
-                .map(|line| line_to_points(line))
-                .collect::<Vec<(Point, usize, Point)>>();
-            let mut beacons = HashSet::new();
-            let mut covered_intervals = vec![];
-            for (center, distance, beacon) in circles_and_beacons {
-                let covered_line = center.line(distance, on_line);
-                covered_intervals.push(covered_line.1);
-                beacons.insert(beacon);
-            }
-            let all_covered = -(beacons.len() as i64);
-            let mut interval_set = vec![].to_interval_set();
-            interval_set.extend(covered_intervals);
-            // for interval in interval_set.intervals {
-            //     all_covered += interval.hi - interval.lo;
-            // }
-            for interval in interval_set {
-            }
-            println!("Part 1: {}", all_covered);
+        let circles_and_beacons = lines
+            .iter()
+            .map(|line| line_to_points(line))
+            .collect::<Vec<(Point, usize, Point)>>();
+        let mut beacons = HashSet::new();
+        let mut interval_set = IntervalSet::new();
+        for (center, distance, beacon) in circles_and_beacons.clone() {
+            let (_y, interval) = center.line(distance, on_line);
+            interval_set.add(interval);
+            beacons.insert(beacon);
         }
+        let all_covered = interval_set.size();
+        println!("Part 1: {}", all_covered);
+            
+        // let max_bound = 1 + if lines.len() > 20 { 4000000 } else { 20 };
+        // for on_line in 0..max_bound {
+        //     let mut interval_set = IntervalSet::new();
+        //     for (center, distance, beacon) in circles_and_beacons.clone() {
+        //         let (_y, interval) = center.line(distance, on_line);
+        //         interval_set.add(interval);
+        //     }
+        //     if on_line == 11 {
+        //         println!("{} - {:#?}", on_line, interval_set);
+        //     }
+        // }
 
-    //     {
-    //         let circles_and_beacons = lines
-    //             .iter()
-    //             .map(|line| line_to_points(line))
-    //             .collect::<Vec<(Point, usize, Point)>>();
-    //         let max_bound = 1 + if lines.len() > 20 { 4000000 } else { 20 };
-    //         for x in 0..max_bound {
-    //             for y in 0..max_bound {
-    //                 let candidate = Point{x, y};
-    //                 let mut any_cover = false;
-    //                 for (center, distance, _beacon) in &circles_and_beacons[0..] {
-    //                     if center.distance(&candidate) <= *distance {
-    //                         any_cover = true;
-    //                         break;
-    //                     }
-    //                 }
-    //                 if !any_cover {
-    //                     println!("Part 2: {},{} - {}", x, y, (4000000 * x) + y );
-    //                     return;
-    //                 }
-    //             }
-    //         }
-    //     }
     }
 }
 
