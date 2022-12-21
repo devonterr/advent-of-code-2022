@@ -48,6 +48,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "day-15"
+version = "0.1.0"
+dependencies = [
+ "shared",
+]
+
+[[package]]
 name = "day-2"
 version = "0.1.0"
 dependencies = [
