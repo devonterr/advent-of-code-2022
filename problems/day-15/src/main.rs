@@ -15,6 +15,12 @@ impl Interval {
             || (self.lo <= other.hi && self.hi >= other.hi)
             || (other.lo <= self.lo && other.hi >= self.lo)
             || (other.lo <= self.hi && other.hi >= self.hi)
+            // // Technically these are adjacent conditions, but we consider a
+            // // gap of widge zero to mean they overlap 
+            // || (other.lo == self.hi - 1)
+            // || (other.hi == self.hi - 1)
+            // || (self.lo == other.hi - 1)
+            // || (self.hi == other.hi - 1)
     }
 
     fn merge(&mut self, other: &Interval) {
@@ -28,13 +34,17 @@ impl Interval {
 }
 #[derive(Debug)]
 struct IntervalSet {
+    on_line: i64,
     intervals: BTreeSet<Interval>,
 }
 impl IntervalSet {
-    fn new() -> IntervalSet {
-        IntervalSet{intervals: BTreeSet::new()}
+    fn new(on_line: i64) -> IntervalSet {
+        IntervalSet{on_line, intervals: BTreeSet::new()}
     }
     fn add(&mut self, mut interval: Interval) {
+        println!("==============================");
+        println!("ADD {:#?}", interval);
+        println!("TO {:#?}", self);
         let (overlaps, independent): (Vec<Interval>, Vec<Interval>) =
             self.intervals.iter().partition(|c| c.overlaps(&interval));
         for i in overlaps {
@@ -43,11 +53,24 @@ impl IntervalSet {
         let mut result: BTreeSet<Interval> = BTreeSet::new();
         result.insert(interval.to_owned());
         result.extend(&independent);
+        println!("RESULT {:#?}", result);
         self.intervals = result;
     }
     
     fn size(&self) -> i64 {
         self.intervals.iter().map(|i| i.size()).sum::<i64>()
+    }
+
+    fn contains(&self, point: &Point) -> bool {
+        if self.on_line != point.y {
+            return false;
+        }
+        for interval in self.intervals.iter() {
+            if interval.lo <= point.x && interval.hi >= point.x {
+                return true;
+            }
+        }
+        false
     }
 }
 
@@ -122,6 +145,8 @@ mod tests {
         let (y, interval) = a.line(d, line);
         assert_eq!(y, line);
         assert_eq!(interval.size(), 3);
+        assert_eq!(interval.lo, 7);
+        assert_eq!(interval.hi, 9);
 
         let a = Point { x: 8, y: 7 };
         let d = 2;
@@ -129,6 +154,17 @@ mod tests {
         let (y, interval) = a.line(d, line);
         assert_eq!(y, line);
         assert_eq!(interval.size(), 3);
+        assert_eq!(interval.lo, 7);
+        assert_eq!(interval.hi, 9);
+
+        let a = Point { x: 8, y: 7 };
+        let d = 3;
+        let line = a.y + 1;
+        let (y, interval) = a.line(d, line);
+        assert_eq!(y, line);
+        assert_eq!(interval.size(), 5);
+        assert_eq!(interval.lo, 6);
+        assert_eq!(interval.hi, 10);
     }
 }
 
@@ -152,14 +188,15 @@ impl Solution for Day15 {
             .map(|line| line_to_points(line))
             .collect::<Vec<(Point, usize, Point)>>();
         let mut beacons = HashSet::new();
-        let mut interval_set = IntervalSet::new();
+        let mut interval_set = IntervalSet::new(on_line);
         for (center, distance, beacon) in circles_and_beacons.clone() {
             let (_y, interval) = center.line(distance, on_line);
             interval_set.add(interval);
             beacons.insert(beacon);
         }
         let all_covered = interval_set.size();
-        println!("Part 1: {}", all_covered);
+        let covered_beacons = beacons.iter().filter(|b| interval_set.contains(b) ).collect::<Vec<&Point>>();
+        println!("Part 1: {}", all_covered - (covered_beacons.len() as i64));
             
         // let max_bound = 1 + if lines.len() > 20 { 4000000 } else { 20 };
         // for on_line in 0..max_bound {
@@ -177,7 +214,7 @@ impl Solution for Day15 {
 }
 
 fn main() {
-    Day15 {}.test_and_run();
+    // Day15 {}.test_and_run();
     // Day15 {}.test();
-    // Day15 {}.run();
+    Day15 {}.run();
 }
