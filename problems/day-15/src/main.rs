@@ -1,6 +1,4 @@
-use std::{
-    collections::{BTreeSet, HashSet},
-};
+use std::collections::{BTreeSet, HashSet};
 
 use shared::{read_lines, AoCProblem, AoCSolution, Solution};
 
@@ -18,17 +16,17 @@ impl Interval {
     }
 
     fn adjacent(&self, other: &Interval) -> bool {
-        (self.hi + 1 == other.lo) ||
-        (self.lo == other.hi + 1) ||
-        (other.hi + 1 == self.lo) ||
-        (other.lo == self.hi + 1)
+        (self.hi + 1 == other.lo)
+            || (self.lo == other.hi + 1)
+            || (other.hi + 1 == self.lo)
+            || (other.lo == self.hi + 1)
     }
 
     fn merge(&mut self, other: &Interval) {
         self.hi = self.hi.max(other.hi);
         self.lo = self.lo.min(other.lo);
     }
-    
+
     fn size(&self) -> i64 {
         1 + (self.hi - self.lo).abs()
     }
@@ -40,11 +38,11 @@ impl Interval {
     fn split(&self, value: i64) -> Vec<Interval> {
         if self.contains(value) {
             vec![
-                Interval{
+                Interval {
                     lo: self.lo,
                     hi: value - 1,
                 },
-                Interval{
+                Interval {
                     lo: value + 1,
                     hi: self.hi,
                 },
@@ -61,24 +59,25 @@ struct IntervalSet {
 }
 impl IntervalSet {
     fn new(on_line: i64) -> IntervalSet {
-        IntervalSet{on_line, intervals: BTreeSet::new()}
+        IntervalSet {
+            on_line,
+            intervals: BTreeSet::new(),
+        }
     }
     fn add(&mut self, mut interval: Interval) {
-        // println!("==============================");
-        // println!("ADD {:#?}", interval);
-        // println!("TO {:#?}", self);
-        let (overlaps, independent): (Vec<Interval>, Vec<Interval>) =
-            self.intervals.iter().partition(|c| c.overlaps(&interval) || c.adjacent(&interval));
+        let (overlaps, independent): (Vec<Interval>, Vec<Interval>) = self
+            .intervals
+            .iter()
+            .partition(|c| c.overlaps(&interval) || c.adjacent(&interval));
         for i in overlaps {
             interval.merge(&i);
         }
         let mut result: BTreeSet<Interval> = BTreeSet::new();
         result.insert(interval.to_owned());
         result.extend(&independent);
-        // println!("RESULT {:#?}", result);
         self.intervals = result;
     }
-    
+
     fn size(&self) -> i64 {
         self.intervals.iter().map(|i| i.size()).sum::<i64>()
     }
@@ -133,7 +132,6 @@ impl Point {
         let x_distance = (to.x - self.x).abs();
         let y_distance = (to.y - self.y).abs();
         let result = (x_distance + y_distance) as usize;
-        // println!("Distance {:#?} to {:#?} - {}", self, to, result);
         result
     }
 
@@ -141,18 +139,22 @@ impl Point {
         let y = on_line;
         let remaining_distance = (distance as i64) - (on_line - self.y).abs();
         if remaining_distance < 0 {
-            return vec![]
+            return vec![];
         }
         let v1 = self.x - remaining_distance;
         let v2 = self.x + remaining_distance;
-        let candidate_interval = Interval{lo: v1.min(v2), hi: v1.max(v2)};
+        let candidate_interval = Interval {
+            lo: v1.min(v2),
+            hi: v1.max(v2),
+        };
         if beacon.y == on_line && candidate_interval.contains(beacon.x) {
-            candidate_interval.split(beacon.x).iter().map(|i| (y, i.to_owned())).collect::<Vec<(i64, Interval)>>()
+            candidate_interval
+                .split(beacon.x)
+                .iter()
+                .map(|i| (y, i.to_owned()))
+                .collect::<Vec<(i64, Interval)>>()
         } else {
-            vec![(
-                y,
-                candidate_interval,
-            )]
+            vec![(y, candidate_interval)]
         }
     }
 }
@@ -171,7 +173,7 @@ mod tests {
 
     #[test]
     fn should_compute_line() {
-        let beacon = Point{x: 8, y: 20};
+        let beacon = Point { x: 8, y: 20 };
         let a = Point { x: 8, y: 7 };
         let d = 1;
         let line = a.y;
@@ -208,7 +210,7 @@ mod tests {
 
     #[test]
     fn should_compute_split_line() {
-        let beacon = Point{x: 8, y: 8};
+        let beacon = Point { x: 8, y: 8 };
         let a = Point { x: 8, y: 7 };
         let d = 3;
         let line = a.y + 1;
@@ -219,15 +221,14 @@ mod tests {
     #[test]
     fn should_combine_intervals() {
         let mut s = IntervalSet::new(0);
-        s.add(Interval{lo:0, hi: 10});
-        s.add(Interval{lo:2, hi: 12});
-        s.add(Interval{lo:13, hi: 14});
+        s.add(Interval { lo: 0, hi: 10 });
+        s.add(Interval { lo: 2, hi: 12 });
+        s.add(Interval { lo: 13, hi: 14 });
 
-        assert!(s.contains(&Point{y: 0, x: 0}));
-        assert!(s.contains(&Point{y: 0, x: 14}));
+        assert!(s.contains(&Point { y: 0, x: 0 }));
+        assert!(s.contains(&Point { y: 0, x: 14 }));
         assert_eq!(s.intervals.len(), 1);
     }
-
 }
 
 struct Day15 {}
@@ -243,7 +244,7 @@ impl Solution for Day15 {
             .map(|line| line.expect("Should be able to read line"))
             .collect::<Vec<String>>();
 
-        let on_line = if lines.len() > 20 { 2000000 } else { 11 };
+        let on_line = if lines.len() > 20 { 2000000 } else { 10 };
 
         let circles_and_beacons = lines
             .iter()
@@ -253,37 +254,53 @@ impl Solution for Day15 {
         let mut interval_set = IntervalSet::new(on_line);
         for (center, distance, beacon) in circles_and_beacons.clone() {
             let intervals = center.line(distance, on_line, &beacon);
-            if intervals.len() > 1 {
-                println!("SPLIT!!!! {:#?}", intervals);
-            }
             for (_y, interval) in intervals {
                 interval_set.add(interval);
                 beacons.insert(beacon);
             }
         }
         let all_covered = interval_set.size();
-        let covered_beacons = beacons.iter().filter(|b| interval_set.contains(b) ).collect::<Vec<&Point>>();
-        println!("Beacons: {:#?}", beacons);
-        println!("IntervalSet: {:#?}", interval_set);
         println!("Part 1: {}", all_covered);
-            
-        // let max_bound = 1 + if lines.len() > 20 { 4000000 } else { 20 };
-        // for on_line in 0..max_bound {
-        //     let mut interval_set = IntervalSet::new();
-        //     for (center, distance, beacon) in circles_and_beacons.clone() {
-        //         let (_y, interval) = center.line(distance, on_line);
-        //         interval_set.add(interval);
-        //     }
-        //     if on_line == 11 {
-        //         println!("{} - {:#?}", on_line, interval_set);
-        //     }
-        // }
 
+        let max_bound = 1 + if lines.len() > 20 { 4000000 } else { 20 };
+        for on_line in 0..max_bound {
+            let mut interval_set = IntervalSet::new(on_line);
+            for (center, distance, beacon) in circles_and_beacons.clone() {
+                let intervals = center.line(distance, on_line, &beacon);
+                for (_y, interval) in intervals {
+                    interval_set.add(interval);
+                }
+            }
+            for beacon in beacons.clone() {
+                if beacon.y == on_line {
+                    interval_set.add(Interval {
+                        lo: beacon.x,
+                        hi: beacon.x,
+                    })
+                }
+            }
+            if interval_set.intervals.len() > 1 {
+                let x_val = 1 + interval_set
+                                .intervals
+                                .iter()
+                                .map(|i| i.to_owned())
+                                .collect::<Vec<Interval>>()[0]
+                                .hi;
+                if x_val < 0 || x_val > max_bound {
+                    continue;
+                }
+                println!(
+                    "Part 2: {:#?}\n\n{}\n\n\n",
+                    interval_set,
+                    interval_set.on_line
+                        + (4000000
+                            * x_val)
+                );
+            }
+        }
     }
 }
 
 fn main() {
     Day15 {}.test_and_run();
-    // Day15 {}.test();
-    // Day15 {}.run();
 }
