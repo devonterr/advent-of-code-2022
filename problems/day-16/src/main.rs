@@ -23,6 +23,7 @@ struct Edge {
 #[derive(Debug)]
 struct AdjacencyList {
     edges: HashMap<Node, HashSet<Edge>>,
+    shortest_paths: HashMap<(String, String), Option<usize>>,
 }
 impl AdjacencyList {
     fn merge(&mut self, other: &AdjacencyList) {
@@ -43,7 +44,7 @@ impl AdjacencyList {
             .edges
             .keys()
             .map(|k| k.label.to_owned())
-            // .filter(|l| l != STARTING_POINT)
+            .filter(|l| l != STARTING_POINT)
             .collect::<Vec<String>>();
         let to_visit_len = to_visit.len();
         to_visit.into_iter().permutations(to_visit_len)
@@ -84,9 +85,20 @@ impl AdjacencyList {
             .flatten()
     }
 
-    fn shortest_path(&self, from: String, to: String) -> Option<usize> {
-        self._shortest_path(from, to, HashSet::new(), 0)
-            .map(|v| 1 + v) // +1 for cost to activate - no point in visiting a node directly if we're not activating it
+    fn shortest_path(&mut self, from: String, to: String) -> Option<usize> {
+        let key = (from.clone(), to.clone());
+        if self.shortest_paths.contains_key(&key) {
+            self.shortest_paths
+                .get(&key)
+                .expect("Should contain")
+                .to_owned()
+        } else {
+            let res = self
+                ._shortest_path(from, to, HashSet::new(), 0)
+                .map(|v| 1 + v); // +1 for cost to activate - no point in visiting a node directly if we're not activating it
+                                 // self.shortest_paths.insert(key, res);
+            res
+        }
     }
 
     fn sources_of(&self, target: String) -> Vec<(Node, Edge)> {
@@ -102,12 +114,14 @@ impl AdjacencyList {
             .collect::<Vec<(Node, Edge)>>()
     }
 
-    fn score(&self, path: Vec<String>) -> usize {
+    fn score(&mut self, path: Vec<String>) -> usize {
         // Given a path, compute the score of following that path for as long as possible
         // or None if not possible at all
+        let mut path_with_start = vec![STARTING_POINT.to_owned()];
+        path_with_start.extend(path);
         let mut budget = 30;
         let mut score = 0;
-        for segment in path.windows(2) {
+        for segment in path_with_start.windows(2) {
             let from = &segment[0];
             let to = &segment[1];
             let path_cost = self.shortest_path(from.to_owned(), to.to_owned());
@@ -126,12 +140,12 @@ impl AdjacencyList {
                 .expect("Node should exist")
                 .rate;
             budget -= path_cost;
-            score += (node_rate * budget);
+            score += node_rate * budget;
         }
         score
     }
 
-    fn part_one(&self, paths: Vec<Vec<String>>) -> usize {
+    fn part_one(&mut self, paths: Vec<Vec<String>>) -> usize {
         // Given a bunch of paths, score each path and return the highest score
         let mut max_score = 0;
         for path in paths {
@@ -212,7 +226,10 @@ impl TryFrom<String> for AdjacencyList {
             .collect::<HashSet<Edge>>();
         let node = Node { label: from, rate };
         edges.insert(node, edge_list);
-        Ok(AdjacencyList { edges })
+        Ok(AdjacencyList {
+            edges,
+            shortest_paths: HashMap::new(),
+        })
     }
 }
 
