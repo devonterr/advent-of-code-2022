@@ -1,107 +1,189 @@
-use std::collections::{HashMap, HashSet};
+use itertools::{Itertools, Permutations};
+use std::{
+    collections::{HashMap, HashSet},
+    vec::IntoIter,
+};
 
 use shared::{read_lines, AoCProblem, AoCSolution, Solution};
 
 const STARTING_POINT: &str = "AA";
 
-#[derive(Clone, Debug)]
-enum Operation {
-    Open(String),
-    Follow(String),
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+struct Node {
+    label: String,
+    rate: usize,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 struct Edge {
     to: String,
-    weight: usize,
+    cost: usize,
 }
 
-// (CurrentNode, weight, Visisted, Opened, path, (start, rate))
-type BfsState = (
-    String,
-    usize,
-    HashSet<String>,
-    HashSet<String>,
-    Vec<Operation>,
-    Vec<(usize, usize)>,
-);
-
+#[derive(Debug)]
 struct AdjacencyList {
-    edges: HashMap<String, Vec<Edge>>,
+    edges: HashMap<Node, HashSet<Edge>>,
 }
 impl AdjacencyList {
     fn merge(&mut self, other: &AdjacencyList) {
         for (key, value) in other.edges.iter() {
             if let Some(self_edges) = self.edges.get_mut(key) {
-                self_edges.extend(value.to_owned());
+                for e in value {
+                    self_edges.insert(e.to_owned());
+                }
             } else {
                 self.edges.insert(key.to_owned(), value.clone());
             }
         }
     }
 
-    fn bfs_single_path(&self, steps: usize, state: BfsState) -> Vec<BfsState> {
-        if steps == 0 {
-            return vec![state];
-        }
-        let (current, current_weight, visited, opened, path, weights) = state;
-        let should_open = !opened.contains(&current);
-        let to_visit = self.edges.get(&current);
-        let mut next_paths: Vec<BfsState> = if to_visit.is_none() {
-            vec![]
-        } else {
-            to_visit
-                .unwrap()
-                .iter()
-                .map(|e| {
-                    let next_to_visit = e.clone().to;
-                    let mut next_visited = HashSet::new();
-                    next_visited.extend(visited.clone());
-                    next_visited.insert(next_to_visit.clone());
-                    let mut next_path = path.clone();
-                    next_path.push(Operation::Follow(next_to_visit.clone()));
-                    let mut next_weights = weights.clone();
-                    next_weights.push((steps - 1, e.weight));
-                    (
-                        next_to_visit.clone(),
-                        e.weight,
-                        next_visited,
-                        opened.clone(),
-                        next_path,
-                        next_weights,
-                    )
-                })
-                .collect()
-        };
-        if should_open {
-            let mut next_opened = opened.clone();
-            next_opened.insert(current.clone());
-            let mut next_weights = weights.clone();
-            next_weights.push((steps - 1, current_weight));
-            next_paths.push((
-                current.clone(),
-                current_weight,
-                visited.clone(),
-                next_opened,
-                path.clone(),
-                next_weights,
-            ));
-        }
-        return next_paths;
+    fn paths(&self) -> Permutations<IntoIter<String>> {
+        // Find all paths that visit each node _except_ the starting node
+        let to_visit = self
+            .edges
+            .keys()
+            .map(|k| k.label.to_owned())
+            // .filter(|l| l != STARTING_POINT)
+            .collect::<Vec<String>>();
+        let to_visit_len = to_visit.len();
+        to_visit.into_iter().permutations(to_visit_len)
     }
 
-    fn bfs(&self, steps: usize) -> Vec<BfsState> {
-        let mut initial_visited = HashSet::new();
-        initial_visited.insert(STARTING_POINT.to_owned());
-        let initial_state: BfsState = (
-            STARTING_POINT.to_owned(),
-            0,
-            initial_visited,
-            HashSet::new(),
-            vec![],
-            vec![],
-        );
-        self.bfs_single_path(1 + steps, initial_state)
+    fn _shortest_path(
+        &self,
+        from: String,
+        to: String,
+        visited: HashSet<String>,
+        cost: usize,
+    ) -> Option<usize> {
+        if from.eq(&to) {
+            return Some(cost);
+        }
+        let candidates = self
+            .edges
+            .iter()
+            .filter(|kv| kv.0.label.eq(&from))
+            .next()
+            .expect("Node should be in graph")
+            .1
+            .iter()
+            .filter(|e| !visited.contains(&e.to))
+            .collect::<Vec<&Edge>>();
+        if candidates.len() == 0 {
+            return None;
+        }
+        candidates
+            .into_iter()
+            .map(|c| {
+                let mut new_visited = visited.clone();
+                new_visited.insert(c.to.clone());
+                return self._shortest_path(c.to.clone(), to.clone(), new_visited, cost + c.cost);
+            })
+            .filter(|c| c.is_some())
+            .min()
+            .flatten()
+    }
+
+    fn shortest_path(&self, from: String, to: String) -> Option<usize> {
+        self._shortest_path(from, to, HashSet::new(), 0)
+            .map(|v| 1 + v) // +1 for cost to activate - no point in visiting a node directly if we're not activating it
+    }
+
+    fn sources_of(&self, target: String) -> Vec<(Node, Edge)> {
+        self.edges
+            .iter()
+            .flat_map(|kv| {
+                kv.1.iter()
+                    .map(|edge| (kv.0, edge))
+                    .collect::<Vec<(&Node, &Edge)>>()
+            })
+            .filter(|&(_, edge)| edge.to.eq(&target))
+            .map(|(n, e)| (n.to_owned(), e.to_owned()))
+            .collect::<Vec<(Node, Edge)>>()
+    }
+
+    fn score(&self, path: Vec<String>) -> usize {
+        // Given a path, compute the score of following that path for as long as possible
+        // or None if not possible at all
+        let mut budget = 30;
+        let mut score = 0;
+        for segment in path.windows(2) {
+            let from = &segment[0];
+            let to = &segment[1];
+            let path_cost = self.shortest_path(from.to_owned(), to.to_owned());
+            if path_cost.is_none() {
+                return score;
+            }
+            let path_cost = path_cost.unwrap();
+            if path_cost > budget {
+                return score;
+            }
+            let node_rate = self
+                .edges
+                .keys()
+                .filter(|k| k.label.eq(to))
+                .next()
+                .expect("Node should exist")
+                .rate;
+            budget -= path_cost;
+            score += (node_rate * budget);
+        }
+        score
+    }
+
+    fn part_one(&self, paths: Vec<Vec<String>>) -> usize {
+        // Given a bunch of paths, score each path and return the highest score
+        let mut max_score = 0;
+        for path in paths {
+            let path_score = self.score(path);
+            max_score = max_score.max(path_score);
+        }
+        max_score
+    }
+
+    fn compact(&mut self) {
+        // A bunch of nodes have rate equal to zero. We never have a reason to turn them on or visit them, other than
+        // in passing to another node. Lets get rid of them to trim up the search space
+        // Keep the starting node, for convenience
+        loop {
+            // Find a node with rate 0
+            let to_remove = self
+                .edges
+                .iter()
+                .filter(|&(node, _)| node.rate == 0 && !node.label.eq(STARTING_POINT))
+                .map(|(n, e)| (n.to_owned(), e.to_owned()))
+                .next();
+            if to_remove.is_none() {
+                break;
+            }
+            let (node_to_remove, destinations_to_induce) =
+                to_remove.expect("Should have a node to remove");
+
+            // Find all nodes with edges to that node
+            let sources = self.sources_of(node_to_remove.label.clone());
+
+            // Induce new edges between those sources to the destiations of that node
+            for (source_node, source_edge) in sources {
+                let source_node_edges = self
+                    .edges
+                    .get_mut(&source_node)
+                    .expect("Source node should exist in edgelist");
+                for destination in destinations_to_induce.iter() {
+                    if destination.to.eq(&source_node.label) {
+                        continue;
+                    }
+                    let edge_to_add = Edge {
+                        to: destination.to.clone(),
+                        cost: source_edge.cost + destination.cost,
+                    };
+                    source_node_edges.insert(edge_to_add);
+                }
+                source_node_edges.remove(&source_edge);
+            }
+
+            // Remove the zero rate node
+            self.edges.remove(&node_to_remove);
+        }
     }
 }
 impl TryFrom<String> for AdjacencyList {
@@ -124,14 +206,12 @@ impl TryFrom<String> for AdjacencyList {
         let destinations = parts[9..]
             .iter()
             .map(|p| p.trim_end_matches(',').to_owned());
-        let mut edges = HashMap::new();
+        let mut edges: HashMap<Node, HashSet<Edge>> = HashMap::new();
         let edge_list = destinations
-            .map(|d| Edge {
-                to: d,
-                weight: rate,
-            })
-            .collect::<Vec<Edge>>();
-        edges.insert(from, edge_list);
+            .map(|d| Edge { to: d, cost: 1 })
+            .collect::<HashSet<Edge>>();
+        let node = Node { label: from, rate };
+        edges.insert(node, edge_list);
         Ok(AdjacencyList { edges })
     }
 }
@@ -148,7 +228,7 @@ impl Solution for Day16 {
             .expect("Should be able to read file")
             .map(|line| line.expect("Should be able to read line"));
 
-        let adjacencies = lines
+        let mut adjacencies = lines
             .map(AdjacencyList::try_from)
             .map(|maybe| maybe.expect("Should be able to parse adjacencies"))
             .reduce(|mut p, n| {
@@ -156,13 +236,21 @@ impl Solution for Day16 {
                 p
             })
             .expect("Should be able to reduce adjacencies");
-        
-        let result = adjacencies.bfs(30);
-        println!("{:#?}", result);
+
+        adjacencies.compact();
+        let mut best_score = (vec![], 0);
+        for path in adjacencies.paths() {
+            let score = adjacencies.score(path.to_owned());
+            if score > best_score.1 {
+                best_score = (path, score);
+            }
+        }
+
+        println!("Part 1: {} :{}", best_score.0.join("-"), best_score.1);
     }
 }
 
 fn main() {
-    Day16 {}.test();
-    // Day16 {}.test_and_run();
+    // Day16 {}.test();
+    Day16 {}.test_and_run();
 }
