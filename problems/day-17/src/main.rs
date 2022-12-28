@@ -106,7 +106,8 @@ impl Grid {
         shapes: &mut impl Iterator<Item = Shape>,
     ) {
         let mut shape_origin = self.highest() + 3;
-        let mut shape = shapes.next().expect("Should have a shape").to_bitfield();
+        let shape_type = shapes.next().expect("Should have a shape");
+        let mut shape = shape_type.to_bitfield();
         // println!("Round: {}", Shape::display(&shape));
         loop {
             // Get an op, transform shape, and check for overflow/collision
@@ -188,21 +189,10 @@ impl Solution for Day17 {
 
         let mut grid = Grid::new(2022);
 
-        for _ in 0..2022 {
+        for i in 0..2022 {
             grid.round(&mut ops, &mut shapes);
-            // println!("{}", grid);
         }
         println!("Part one: {}", grid.highest());
-
-        // Can we truncate?
-        // let highest = u8::from_str_radix("11111110", 2).expect("Should");
-        // let mut i = 0;
-        // for v in grid.0.iter() {
-        //     i += 1;
-        //     if *v >= highest {
-        //         println!("Found one! {}", i);
-        //     }
-        // }
     }
 }
 
