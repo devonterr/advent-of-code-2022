@@ -138,11 +138,14 @@ impl Grid {
     }
 
     fn top(&self) -> Vec<u8> {
+        let track_last_n = 2000;
         let highest = self.highest();
-        if highest < 5 {
-            return vec![0];
+        if highest < track_last_n {
+            return self.0[0..highest].to_vec();
+            // return vec![0];
         }
-        self.0[highest - 5..highest - 1].to_vec()
+        // self.0[highest - 5..highest - 1].to_vec()
+        self.0[highest - track_last_n..highest + 1].to_vec()
     }
 }
 impl Display for Grid {
@@ -203,6 +206,7 @@ impl Solution for Day17 {
         for i in 0..2022 {
             grid.round(&mut ops, &mut shapes);
         }
+
         println!("Part one: {}", grid.highest());
 
         // Part 2
@@ -242,17 +246,11 @@ impl Solution for Day17 {
             grid2.round(&mut ops2, &mut shapes2);
             hare = grid2.round(&mut ops2, &mut shapes2);
         }
-        let height_of_cycle = grid2.highest() - grid.highest();
-        // println!(
-        //     "{} - {} = {}",
-        //     grid2.highest(),
-        //     grid.highest(),
-        //     height_of_cycle
-        // );
 
         // Reset the tortoise, loop until we hit start of cycle again, counting along the way.
         // This gives us the number of rounds and the total height of the prefix phase
-        let mut length_of_prefix = 0;
+        // let mut length_of_prefix = 0;
+        let mut number_of_rounds_in_prefix: usize = 0;
         let mut ops = line
             .chars()
             .map(Op::try_from)
@@ -271,42 +269,38 @@ impl Solution for Day17 {
             }
             tortoise = grid.round(&mut ops, &mut shapes);
             hare = grid2.round(&mut ops2, &mut shapes2);
-            length_of_prefix += 1;
+            number_of_rounds_in_prefix += 1;
         }
-        let height_of_prefix = grid.highest();
-        println!(
-            "Prefix len {}, prefix height {}",
-            length_of_prefix, height_of_prefix
-        );
 
         // Now we need to compute the number of rounds it takes to complete a cycle
         // and the height of a cycle
-        let mut length_of_cycle = 1;
+        // let mut length_of_cycle = 1;
+        let mut number_of_rounds_per_cycle = 1;
         hare = grid.round(&mut ops, &mut shapes);
         loop {
             if tortoise == hare {
                 break;
             }
             hare = grid.round(&mut ops, &mut shapes);
-            length_of_cycle += 1;
+            number_of_rounds_per_cycle += 1;
         }
         println!(
-            "Len of cycle: {}, height of cycle {}",
-            length_of_cycle, height_of_cycle
+            "Rounds in cycle: {}, Rounds in prefix {}",
+            number_of_rounds_per_cycle, number_of_rounds_in_prefix
         );
 
-        // Finally, we can compute the total height
-        let number_of_rounds_spent_cycling = 1000000000000 - length_of_prefix;
-        let number_of_cycles = number_of_rounds_spent_cycling / length_of_cycle;
-        let remainder_rounds =
-            number_of_rounds_spent_cycling - (number_of_cycles * length_of_cycle);
+        // Now, to compute the total height we need to find
+        // 1. The number of rounds in the remainder
+        // 2. The heigh of the remainder
+        // 3. The height of each cycle
+        // To do so, make a single pass up to the end of the first cycle
+        // and record the heights along the way.
 
-        // TODO = need to compute remainder
-        let height_of_remainder = 0;
+        let number_of_rounds_after_prefix = 1000000000000 - number_of_rounds_in_prefix;
+        let number_of_rounds_in_remainder =
+            number_of_rounds_after_prefix % number_of_rounds_per_cycle;
+        let number_of_cycles = number_of_rounds_after_prefix / number_of_rounds_per_cycle;
 
-        // GARBAGE
-        // TODO - Something is off with the height calculation here
-        // Appear to be off by one, though the top looks correct
         let mut ops = line
             .chars()
             .map(Op::try_from)
@@ -317,42 +311,47 @@ impl Solution for Day17 {
 
         let mut grid = Grid::new(2022);
 
-        for _ in 0..length_of_prefix + 1 {
+        // Run through the prefix; get the starting height
+        for _ in 0..number_of_rounds_in_prefix {
             grid.round(&mut ops, &mut shapes);
         }
-        for _ in 0..length_of_cycle {
+        // println!("PREFIX");
+        // println!("{}", grid);
+        // println!("~~~~~~~~~~~");
+        let prefix_height = grid.highest();
+        // Run through remainder; get the remainder height
+        for _ in 0..number_of_rounds_in_remainder {
             grid.round(&mut ops, &mut shapes);
         }
-        println!("After prefix {}", grid.highest());
-        let initial_remainder_height = grid.highest();
-        for _ in 0..remainder_rounds {
+        // println!("REMAINDER");
+        // println!("{}", grid);
+        // println!("~~~~~~~~~~~");
+        let remainder_height = grid.highest() - prefix_height;
+        // Finish cycle; get final height to get the total height of a cycle
+        for _ in number_of_rounds_in_remainder..number_of_rounds_per_cycle {
             grid.round(&mut ops, &mut shapes);
         }
-        let final_remainder_height = grid.highest();
-        println!("After remainder {}", grid.highest());
-        let height_of_remainder = final_remainder_height - initial_remainder_height;
-        println!("Total remainder {}", height_of_remainder);
+        let single_cycle_height = grid.highest() - prefix_height;
+        // println!("CYCLE");
+        // println!("{}", grid);
+        // println!("~~~~~~~~~~~");
 
-        println!("{}", Shape::display(&grid.top()));
+        // One more cycle for funsies
+        for _ in 0..number_of_rounds_per_cycle {
+            grid.round(&mut ops, &mut shapes);
+        }
+        // println!("CYCLE2");
+        // println!("{}", grid);
+        // println!("~~~~~~~~~~~");
 
-        //
-        println!(
-            "Remainder: {} rounds, total height {}",
-            remainder_rounds, height_of_remainder
-        );
-        println!(
-            "Total Rounds: {} (remainder {}) (num cycles {} * len_of_cycles)",
-            remainder_rounds + length_of_prefix + (number_of_cycles * length_of_cycle),
-            remainder_rounds,
-            number_of_cycles,
-        );
+        // Compute total height
         let total_height =
-            height_of_prefix + (number_of_cycles * height_of_cycle) + height_of_remainder;
-        println!("Part 2: {}", total_height);
+            prefix_height + remainder_height + (number_of_cycles * single_cycle_height);
+        println!("Total Height {}", total_height);
     }
 }
 
 fn main() {
-    // Day17 {}.test();
     Day17 {}.test_and_run();
+    // Day17 {}.run();
 }
