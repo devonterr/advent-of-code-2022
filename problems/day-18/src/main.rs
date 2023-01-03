@@ -2,40 +2,6 @@ use std::collections::HashSet;
 
 use shared::{read_lines, AoCProblem, AoCSolution, Solution};
 
-// struct Cube {
-//     // Origin assumed to be bottom-left corner
-//     origin: (usize, usize, usize),
-// }
-// impl Cube {
-//     fn neighbors(&self) -> Vec<(usize, usize, usize)> {
-//         vec![
-//             (self.origin.0 + 1, self.origin.1, self.origin.2),
-//             (self.origin.0, self.origin.1 + 1, self.origin.2),
-//             (self.origin.0, self.origin.1, self.origin.2 + 1),
-//             (self.origin.0 - 1, self.origin.1, self.origin.2),
-//             (self.origin.0, self.origin.1 - 1, self.origin.2),
-//             (self.origin.0, self.origin.1, self.origin.2 - 1),
-//         ]
-//     }
-// }
-// impl TryFrom<String> for Cube {
-//     type Error = String;
-
-//     fn try_from(value: String) -> Result<Self, Self::Error> {
-//         let parts = value
-//             .trim()
-//             .split(',')
-//             .map(|c| {
-//                 c.parse::<usize>()
-//                     .expect("Should be able to parse origin coordinates")
-//             })
-//             .collect::<Vec<usize>>();
-
-//         let parts = (parts[0], parts[1], parts[2]);
-//         Ok(Cube { origin: parts })
-//     }
-// }
-
 fn neighbors(origin: &(usize, usize, usize)) -> Vec<(usize, usize, usize)> {
     vec![
         (origin.0 + 1, origin.1, origin.2),
@@ -59,7 +25,7 @@ impl Solution for Day18 {
             .expect("Should be able to read file")
             .map(|l| l.expect("Should be able to read line"));
 
-        let mut origins = lines
+        let origins = lines
             .map(|l| {
                 let parts = l
                     .trim()
@@ -77,7 +43,7 @@ impl Solution for Day18 {
 
         let exposed_faces = origins
             .iter()
-            .flat_map(|o| neighbors(o).into_iter().filter(|n| !origins.contains(&n)))
+            .flat_map(|o| neighbors(o).into_iter().filter(|n| !origins.contains(n)))
             .count();
 
         println!("Part one: {}", exposed_faces);
