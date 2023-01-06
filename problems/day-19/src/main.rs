@@ -67,7 +67,23 @@ impl State {
 
     fn initial_state() -> Self {
         State {
-            time: 0,
+            time: 24,
+
+            ore_bots: 1,
+            clay_bots: 0,
+            obsidian_bots: 0,
+            geode_bots: 0,
+
+            ore: 0,
+            clay: 0,
+            obsidian: 0,
+            geodes: 0,
+        }
+    }
+
+    fn initial_state_pt2() -> Self {
+        State {
+            time: 32,
 
             ore_bots: 1,
             clay_bots: 0,
@@ -88,14 +104,14 @@ impl State {
             || (bot.eq(&BotType::Obsidian) && self.clay_bots < 1)
         {
             let mut new_state = self.clone();
-            new_state.time = 24;
+            new_state.time = 0;
             return new_state;
         }
 
         // Given _enough_ time, we should be able to gather enough resources. Now the question becomes "Do we have enough time"
         let mut new_state = self.clone();
-        while new_state.time < 24 {
-            new_state.time += 1;
+        while new_state.time > 0 {
+            new_state.time -= 1;
             if new_state.can_build(*bot, blueprint) {
                 new_state.gather();
                 new_state.add_bot(*bot, blueprint);
@@ -127,7 +143,7 @@ impl Strategy {
     /// options which even have the _potential_ to exceed the current maximum found will be fully
     /// explored. It is fine to overestimate, which trades additional computation time for simplicity
     fn compute_upper_bound_value(&self) -> usize {
-        let mut rounds_remaining = 24 - self.state.time;
+        let mut rounds_remaining = self.state.time;
         let mut total_geodes = self.state.geodes;
         let mut geode_bots = self.state.geode_bots;
         let mut should_build = self.state.obsidian > 0;
@@ -231,13 +247,13 @@ impl TryFrom<String> for Blueprint {
 }
 impl Blueprint {
     /// Return the maximum number of geodes that can be built with a given blueprint
-    fn max_geodes(&self) -> usize {
+    fn max_geodes(&self, initial_state_factory: fn() -> State) -> usize {
         let mut minimum_number_of_geodes_produced = 0;
         let mut best_strategy = None;
         let mut queue = BinaryHeap::new();
         let strategy = Strategy {
             blueprint: *self,
-            state: State::initial_state(),
+            state: initial_state_factory(),
             path: vec![],
         };
         queue.push(strategy);
@@ -280,8 +296,8 @@ impl Blueprint {
     }
 
     /// Compute the quality metric for the blueprint
-    fn quality_level(&self) -> usize {
-        let max_geodes = self.max_geodes();
+    fn quality_level(&self, initial_state_factory: fn() -> State) -> usize {
+        let max_geodes = self.max_geodes(initial_state_factory);
         let res = self.id * max_geodes;
         res
     }
@@ -299,13 +315,31 @@ impl Solution for Day19 {
             .expect("Should be able to read file")
             .map(|line| line.expect("Should be able to read line"))
             .map(Blueprint::try_from)
-            .map(|blueprint| blueprint.expect("Should be able to parse blueprint"));
+            .map(|blueprint| blueprint.expect("Should be able to parse blueprint"))
+            .collect::<Vec<_>>();
 
-        let quality_levels = blueprints.map(|bp| bp.quality_level()).sum::<usize>();
+        let quality_levels = blueprints
+            .clone()
+            .iter()
+            .map(|bp| bp.quality_level(State::initial_state))
+            .sum::<usize>();
         println!("Part one: {:#?}", quality_levels);
+
+        let p2 = blueprints
+            .iter()
+            .take(3)
+            .map(|bp| bp.max_geodes(State::initial_state_pt2))
+            .collect::<Vec<_>>();
+
+        println!(
+            "Part two: {:#?} - Prod {}",
+            p2.clone(),
+            p2.into_iter().reduce(|p, n| p * n).expect("Should reduce")
+        )
     }
 }
 
 fn main() {
     Day19 {}.test_and_run();
+    // Day19 {}.test();
 }
