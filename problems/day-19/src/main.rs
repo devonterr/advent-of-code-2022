@@ -2,8 +2,6 @@ use std::collections::BinaryHeap;
 
 use shared::{read_lines, AoCProblem, AoCSolution, Solution};
 
-use itertools::Itertools;
-
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum BotType {
     Ore,
@@ -273,6 +271,7 @@ impl Blueprint {
             best_strategy
                 .iter()
                 .map(|bt| format!("{:#?}", bt))
+                .collect::<Vec<_>>()
                 .join(", "),
             minimum_number_of_geodes_produced
         );
@@ -283,7 +282,7 @@ impl Blueprint {
     /// Compute the quality metric for the blueprint
     fn quality_level(&self) -> usize {
         let max_geodes = self.max_geodes();
-        let res = self.id * self.max_geodes();
+        let res = self.id * max_geodes;
         res
     }
 }
@@ -308,5 +307,5 @@ impl Solution for Day19 {
 }
 
 fn main() {
-    Day19 {}.test();
+    Day19 {}.test_and_run();
 }
