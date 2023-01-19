@@ -15,14 +15,55 @@ use shared::{read_lines, AoCProblem, AoCSolution, Solution};
     Let's start with the naive case, work on optimizing
 */
 
+fn showv<'a>(value: &i32, list: &'a List<&'a (usize, i32)>) -> &'a List<&'a (usize, i32)> {
+    let to_print = list
+        .iter()
+        .map(|(i, v)| format!("{}", *v))
+        .collect::<Vec<_>>()
+        .join(", ");
+    println!("{} moves:", value);
+    println!("{}\n", to_print);
+    list
+}
+
 fn show<'a>(list: &'a List<&'a (usize, i32)>) -> &'a List<&'a (usize, i32)> {
     let to_print = list
         .iter()
         .map(|(i, v)| format!("{}", *v))
         .collect::<Vec<_>>()
         .join(", ");
-    println!("{}", to_print);
+    println!("{}\n", to_print);
     list
+}
+
+fn part_one(list: &mut List<&(usize, i32)>) {
+    let mut values = Vec::new();
+
+    let len = list.len();
+    let mut cursor = list.cursor_start_mut();
+
+    while !cursor.current().expect("Should init").1.eq(&0) {
+        cursor.move_next_cyclic();
+    }
+
+    for i in 0..3001 {
+        if i == 1000 {
+            values.push(cursor.current().expect("Should have value at"));
+        } else if i == 2000 {
+            values.push(cursor.current().expect("Should have value at"));
+        } else if i == 3000 {
+            values.push(cursor.current().expect("Should have value at"));
+        }
+        cursor.move_next_cyclic();
+        if cursor.current().is_none() {
+            cursor.move_next_cyclic();
+        }
+    }
+    println!(
+        "{:#?}, {}",
+        values.iter().map(|(i, v)| v).collect::<Vec<_>>(),
+        values.iter().map(|(i, v)| v).sum::<i32>()
+    );
 }
 
 struct Day20 {}
@@ -47,27 +88,20 @@ impl Solution for Day20 {
         let list_size = lines.len() as i32;
 
         let mut to_mix = List::from_iter(lines.iter());
-        println!("Original List: {:#?}", to_mix);
+        // showv(&0, &to_mix);
         println!("===================================");
 
         for (original_index, value) in lines.iter() {
-            println!(
-                "Starting iter: (idx, value) = ({}, {})",
-                original_index, value
-            );
-
             // No need to move  if it's a 0
             if value.eq(&0) {
+                // println!("0 does not move\n");
                 continue;
             }
 
-            show(&to_mix);
             let mut cursor = to_mix.cursor_start_mut();
 
             // Advance the cursor until we find the corresponding item
-            println!("\tGet current value...");
             let mut current = cursor.current().expect("Should exist");
-            println!("\tCurrent Value: {:#?}", current);
             while !original_index.eq(&current.0) {
                 cursor.move_next_cyclic();
                 if cursor.current().is_none() {
@@ -96,16 +130,20 @@ impl Solution for Day20 {
             }
 
             // Insert the item
+            //// If we're at the start move back to the other side of the ghost node
+            if cursor.index() == 0 {
+                cursor.move_prev_cyclic();
+            }
             cursor.insert(item);
 
-            println!("After Step {:#?}", cursor);
-            println!("--------------------------------------------");
+            // showv(value, &to_mix);
         }
 
-        println!("{:#?}", lines);
+        // show(&to_mix);
+        part_one(&mut to_mix);
     }
 }
 
 fn main() {
-    Day20 {}.test()
+    Day20 {}.test_and_run()
 }
