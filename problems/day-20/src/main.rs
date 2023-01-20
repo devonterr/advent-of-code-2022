@@ -15,10 +15,13 @@ use shared::{read_lines, AoCProblem, AoCSolution, Solution};
     Let's start with the naive case, work on optimizing
 */
 
-fn showv<'a>(value: &i32, list: &'a List<&'a (usize, i32)>) -> &'a List<&'a (usize, i32)> {
+fn showv<'a>(value: &i64, list: &'a List<(usize, i64)>, debug: bool) -> &'a List<(usize, i64)> {
+    if !debug {
+        return list;
+    }
     let to_print = list
         .iter()
-        .map(|(i, v)| format!("{}", *v))
+        .map(|(_, v)| format!("{}", *v))
         .collect::<Vec<_>>()
         .join(", ");
     println!("{} moves:", value);
@@ -26,20 +29,9 @@ fn showv<'a>(value: &i32, list: &'a List<&'a (usize, i32)>) -> &'a List<&'a (usi
     list
 }
 
-fn show<'a>(list: &'a List<&'a (usize, i32)>) -> &'a List<&'a (usize, i32)> {
-    let to_print = list
-        .iter()
-        .map(|(i, v)| format!("{}", *v))
-        .collect::<Vec<_>>()
-        .join(", ");
-    println!("{}\n", to_print);
-    list
-}
-
-fn part_one(list: &mut List<&(usize, i32)>) {
+fn part_one(list: &mut List<(usize, i64)>) {
     let mut values = Vec::new();
 
-    let len = list.len();
     let mut cursor = list.cursor_start_mut();
 
     while !cursor.current().expect("Should init").1.eq(&0) {
@@ -61,40 +53,21 @@ fn part_one(list: &mut List<&(usize, i32)>) {
     }
     println!(
         "{:#?}, {}",
-        values.iter().map(|(i, v)| v).collect::<Vec<_>>(),
-        values.iter().map(|(i, v)| v).sum::<i32>()
+        values.iter().map(|(_, v)| v).collect::<Vec<_>>(),
+        values.iter().map(|(_, v)| v).sum::<i64>()
     );
 }
 
-struct Day20 {}
-impl AoCProblem for Day20 {
-    fn name(&self) -> String {
-        "day-20".to_string()
-    }
-}
+fn mix(lines: Vec<(usize, i64)>, times: usize, debug: bool) -> List<(usize, i64)> {
+    // let list_size = lines.len() as i64;
 
-impl Solution for Day20 {
-    fn solution(&self, path: &str) {
-        let lines = read_lines(path)
-            .expect("Should be able to read file path")
-            .map(|line| {
-                line.expect("Should be able to read line")
-                    .parse::<i32>()
-                    .expect("Should parse")
-            })
-            .enumerate()
-            .collect::<Vec<_>>();
+    let mut to_mix = List::from_iter(lines.clone().into_iter());
+    showv(&0, &to_mix, debug);
 
-        let list_size = lines.len() as i32;
-
-        let mut to_mix = List::from_iter(lines.iter());
-        // showv(&0, &to_mix);
-        println!("===================================");
-
+    for _ in 0..times {
         for (original_index, value) in lines.iter() {
             // No need to move  if it's a 0
             if value.eq(&0) {
-                // println!("0 does not move\n");
                 continue;
             }
 
@@ -136,10 +109,34 @@ impl Solution for Day20 {
             }
             cursor.insert(item);
 
-            // showv(value, &to_mix);
+            showv(value, &to_mix, debug);
         }
+    }
 
-        // show(&to_mix);
+    to_mix
+}
+
+struct Day20 {}
+impl AoCProblem for Day20 {
+    fn name(&self) -> String {
+        "day-20".to_string()
+    }
+}
+
+impl Solution for Day20 {
+    fn solution(&self, path: &str) {
+        let lines = read_lines(path)
+            .expect("Should be able to read file path")
+            .map(|line| {
+                line.expect("Should be able to read line")
+                    .parse::<i64>()
+                    .expect("Should parse")
+            })
+            .enumerate()
+            .collect::<Vec<_>>();
+
+        let mut to_mix = mix(lines, 1, false);
+
         part_one(&mut to_mix);
     }
 }
