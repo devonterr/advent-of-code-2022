@@ -15,16 +15,17 @@ use shared::{read_lines, AoCProblem, AoCSolution, Solution};
     Let's start with the naive case, work on optimizing
 */
 
-fn showv<'a>(value: &i64, list: &'a List<(usize, i64)>, debug: bool) -> &'a List<(usize, i64)> {
+fn showv<'a>(label: String, list: &'a List<(usize, i64)>, debug: bool) -> &'a List<(usize, i64)> {
     if !debug {
         return list;
     }
+    let list_len = list.len();
     let to_print = list
         .iter()
-        .map(|(_, v)| format!("{}", *v))
+        .map(|(i, v)| format!("{}:{} ({})", i, *v, v.rem_euclid((list_len - 1) as i64)))
         .collect::<Vec<_>>()
         .join(", ");
-    println!("{} moves:", value);
+    println!("{}:", label);
     println!("{}\n", to_print);
     list
 }
@@ -59,15 +60,18 @@ fn part_one(list: &mut List<(usize, i64)>) {
 }
 
 fn mix(lines: Vec<(usize, i64)>, times: usize, debug: bool) -> List<(usize, i64)> {
-    // let list_size = lines.len() as i64;
+    let list_size = lines.len() as i64;
+    let modulus = list_size - 1;
 
     let mut to_mix = List::from_iter(lines.clone().into_iter());
-    showv(&0, &to_mix, debug);
+    showv("Start".to_owned(), &to_mix, debug);
 
-    for _ in 0..times {
+    for round in 0..times {
         for (original_index, value) in lines.iter() {
+            let modded_value = value.rem_euclid(modulus);
+
             // No need to move  if it's a 0
-            if value.eq(&0) {
+            if modded_value.eq(&0) {
                 continue;
             }
 
@@ -84,21 +88,16 @@ fn mix(lines: Vec<(usize, i64)>, times: usize, debug: bool) -> List<(usize, i64)
             }
             // Remove the item
             let item = cursor.remove().expect("Should have item");
+            //// If removing the item puts us on the ghost node, move to next
+            if cursor.current().is_none() {
+                cursor.move_next_cyclic();
+            }
 
             // Shift the cursor
-            if *value < 0 {
-                for _ in *value..0 {
-                    cursor.move_prev_cyclic();
-                    if cursor.current().is_none() {
-                        cursor.move_prev_cyclic();
-                    }
-                }
-            } else {
-                for _ in 0..*value {
+            for _ in 0..modded_value {
+                cursor.move_next_cyclic();
+                if cursor.current().is_none() {
                     cursor.move_next_cyclic();
-                    if cursor.current().is_none() {
-                        cursor.move_next_cyclic();
-                    }
                 }
             }
 
@@ -109,8 +108,9 @@ fn mix(lines: Vec<(usize, i64)>, times: usize, debug: bool) -> List<(usize, i64)
             }
             cursor.insert(item);
 
-            showv(value, &to_mix, debug);
+            showv(format!("Step {}, move {}", round, value), &to_mix, debug);
         }
+        showv(format!("Round {}:", 1 + round), &to_mix, debug);
     }
 
     to_mix
@@ -135,12 +135,21 @@ impl Solution for Day20 {
             .enumerate()
             .collect::<Vec<_>>();
 
-        let mut to_mix = mix(lines, 1, false);
+        let mut to_mix = mix(lines.clone(), 1, false);
+
+        part_one(&mut to_mix);
+
+        let lines = lines
+            .iter()
+            .map(|(i, v)| (i.clone(), v * 811589153))
+            .collect::<Vec<_>>();
+
+        let mut to_mix = mix(lines.clone(), 10, false);
 
         part_one(&mut to_mix);
     }
 }
 
 fn main() {
-    Day20 {}.test_and_run()
+    Day20 {}.test_and_run();
 }
