@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    io::{stdin, Read},
-};
+use std::collections::{HashMap, HashSet};
 
 use shared::{read_lines, AoCProblem, AoCSolution, Solution};
 
@@ -55,26 +52,6 @@ struct Instruction {
 struct Coord {
     row: i32,
     col: i32,
-}
-impl Coord {
-    fn add(&self, other: &Self) -> Self {
-        Self {
-            row: self.row + other.row,
-            col: self.col + other.col,
-        }
-    }
-
-    fn scale(&self, magnitude: i32) -> Self {
-        Self {
-            row: self.row * magnitude,
-            col: self.col * magnitude,
-        }
-    }
-
-    fn translate(&self, unit_vector: &Self, magnitude: i32) -> Self {
-        let vector = unit_vector.scale(magnitude);
-        self.add(&vector)
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -369,8 +346,6 @@ impl Solution for Day22 {
             .map(|x| x.to_owned())
             .collect::<Vec<_>>()
             .into();
-
-        // println!("{:#?}", board);
 
         println!("Instructions: {:#?}", instructions);
 
