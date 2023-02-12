@@ -270,10 +270,10 @@ fn walk(board: &Board, instructions: &Vec<Instruction>) -> State {
     // Find the startig point
     let mut current_state = State::new(board);
 
-    println!(
-        "Initial state: {:#?}\n==============================",
-        current_state
-    );
+    // println!(
+    //     "Initial state: {:#?}\n==============================",
+    //     current_state
+    // );
 
     // For each instruction, try and follow
     for instruction in instructions {
@@ -285,7 +285,7 @@ fn walk(board: &Board, instructions: &Vec<Instruction>) -> State {
 }
 
 fn follow_instruction(board: &Board, state: &State, instruction: &Instruction) -> State {
-    println!("Processing instruction: {:#?} - {:#?}", state, instruction);
+    // println!("Processing instruction: {:#?} - {:#?}", state, instruction);
     // stdin().read(&mut [0]).unwrap();
 
     let mut current_position = state.coordinate.clone();
@@ -370,7 +370,7 @@ impl Solution for Day22 {
             .collect::<Vec<_>>()
             .into();
 
-        println!("{:#?}", board);
+        // println!("{:#?}", board);
 
         println!("Instructions: {:#?}", instructions);
 
